@@ -1,0 +1,7 @@
+{
+  "name": "tsdc_monitoring",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}
