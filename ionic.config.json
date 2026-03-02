@@ -1,5 +1,5 @@
 {
-  "name": "tsdc_monitoring",
+  "name": "monitoring",
   "integrations": {
     "capacitor": {}
   },

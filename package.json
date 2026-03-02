@@ -1,5 +1,5 @@
 {
-  "name": "tsdc_monitoring",
+  "name": "monitoring",
   "private": true,
   "version": "0.0.1",
   "type": "module",
