@@ -1,5 +1,5 @@
 import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonApp, IonRouterOutlet,IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import Home from './pages/Login';
 
@@ -33,15 +33,32 @@ import '@ionic/react/css/palettes/dark.system.css';
 /* Theme variables */
 import './theme/variables.css';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Menu from './pages/Menu'; 
+import Pfofiling from './pages/Profiling';
+import UserAccount from './pages/UserAccount';
+import Profiling from './pages/Profiling';
 
 setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
-      <IonRouterOutlet>
-        <Route exact path="/monitoring" component={Login} />
-      </IonRouterOutlet>
+      {/* 1. Ang SplitPane ang nag-divide sa Menu ug sa main Content */}
+      <IonSplitPane contentId="main">
+        
+        {/* 2. Imong Sidebar Menu */}
+        <Menu />
+
+        {/* 3. Ang main area kung asa manggawas imong mga pages */}
+          <IonRouterOutlet id="main">
+          <Route path="/monitoring/app" component={Menu} />
+          <Route exact path="/monitoring" component={Login} />
+          <Route exact path="/dashboard" component={Dashboard} />
+          <Route exact path="/profiling" component={Profiling} />
+          <Route exact path="/account" component={UserAccount} />
+        </IonRouterOutlet>
+      </IonSplitPane>
     </IonReactRouter>
   </IonApp>
 );

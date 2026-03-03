@@ -47,7 +47,7 @@ const Login: React.FC = () => {
     if (error) {
       setErrorMessage("Invalid email or password.");
     } else {
-      history.push("/dashboard");
+      history.push("/Dashboard");
     }
   };
 
