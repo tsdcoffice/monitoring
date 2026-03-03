@@ -22,6 +22,9 @@ import Dashboard from './pages/Dashboard';
 import Menu from './pages/Menu'; 
 import Profiling from './pages/Profiling';
 import UserAccount from './pages/UserAccount';
+import Scholarship from './pages/Scholarship';
+import StudentList from './pages/StudentList';
+import StudentProfile from './pages/StudentProfile';
 
 setupIonicReact();
 
@@ -47,7 +50,23 @@ const AppContent: React.FC = () => {
         <Route exact path="/dashboard" component={Dashboard} />
         <Route exact path="/profiling" component={Profiling} />
         <Route exact path="/account" component={UserAccount} />
+        <Route exact path="/scholarship" component={Scholarship}/>
+        <Route exact path="/students" component={StudentList}/>
         
+        {/* Scholarship Dashboard is now root */}
+        <Route exact path="/">
+          <Scholarship />
+        </Route>
+
+        <Route exact path="/students/:type">
+          <StudentList />
+        </Route>
+
+        <Route exact path="/student-profile">
+          <StudentProfile />
+        </Route>
+
+
         {/* Child routes for Profiling (Scholarship/Training) */}
         <Route exact path="/profiling/scholarship" component={Profiling} />
         <Route exact path="/profiling/training" component={Profiling} />
