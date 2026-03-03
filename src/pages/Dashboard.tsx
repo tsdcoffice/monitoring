@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
         {/* --- Bar Chart: 22 Barangays --- */}
         <IonCard style={{ borderRadius: '15px', marginTop: '10px' }}>
           <IonCardHeader>
-            <IonCardTitle style={{ fontSize: '1rem' }}>Students per Barangay</IonCardTitle>
+            <IonCardTitle style={{ fontSize: '1rem' }}>Students and Trainees per Barangay</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
             {/* Kani nga div maoy mag-control sa gidak-on sa chart */}

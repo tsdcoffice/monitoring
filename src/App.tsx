@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
+    <IonReactRouter basename="/monitoring">
       <AppContent />
     </IonReactRouter>
   </IonApp>
