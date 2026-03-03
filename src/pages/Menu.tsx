@@ -104,7 +104,7 @@ const Menu: React.FC = () => {
                     
                     <IonItem routerLink="/profiling/training" lines="none" style={{ '--background': 'transparent', color: 'white' }}>
                       <IonIcon slot="start" icon={constructOutline} />
-                      <IonLabel>Training</IonLabel>
+                      <IonLabel>TSDC Skills Training</IonLabel>
                     </IonItem>
                   </IonMenuToggle>
                 </div>
