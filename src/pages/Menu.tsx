@@ -17,14 +17,21 @@ import {
   newspaperOutline, 
   menuOutline, 
   logOutOutline,
-  schoolOutline,   // Icon for Scholarship
-  constructOutline,   // Icon for Training
-  chevronDownOutline 
+  schoolOutline,   
+  constructOutline 
 } from 'ionicons/icons';
+import { useHistory } from 'react-router-dom';
 
 const Menu: React.FC = () => {
   const [width, setWidth] = useState(280); 
   const [isResizing, setIsResizing] = useState(false);
+  const history = useHistory();
+
+  const handleLogout = () => {
+    // I-clear ang session kung naa man gani (e.g., localStorage.clear())
+    // Unya i-redirect pabalik sa login screen
+    history.replace('/monitoring');
+  };
 
   const startResizing = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,6 +63,7 @@ const Menu: React.FC = () => {
     <IonMenu 
       contentId="main" 
       type="overlay" 
+      swipeGesture={false} // Disable swipe para dili mugawas sa login maski hidden
       style={{ '--width': `${width}px`, width: `${width}px` }} 
     >
       <IonContent className="ion-no-padding">
@@ -72,10 +80,12 @@ const Menu: React.FC = () => {
             </div>
 
             {/* Navigation Items */}
-            <IonItem routerLink="/dashboard" lines="none" style={{ '--background': 'transparent', color: 'white' }}>
-              <IonIcon slot="start" icon={gridOutline} />
-              <IonLabel>Dashboard</IonLabel>
-            </IonItem>
+            <IonMenuToggle autoHide={false}>
+              <IonItem routerLink="/dashboard" lines="none" style={{ '--background': 'transparent', color: 'white' }}>
+                <IonIcon slot="start" icon={gridOutline} />
+                <IonLabel>Dashboard</IonLabel>
+              </IonItem>
+            </IonMenuToggle>
 
             {/* --- DROPDOWN ACCORDION FOR PROFILING --- */}
             <IonAccordionGroup>
@@ -101,13 +111,15 @@ const Menu: React.FC = () => {
               </IonAccordion>
             </IonAccordionGroup>
 
-            <IonItem routerLink="/account" lines="none" style={{ '--background': 'transparent', color: 'white' }}>
-              <IonIcon slot="start" icon={personOutline} />
-              <IonLabel>User Account</IonLabel>
-            </IonItem>
+            <IonMenuToggle autoHide={false}>
+              <IonItem routerLink="/account" lines="none" style={{ '--background': 'transparent', color: 'white' }}>
+                <IonIcon slot="start" icon={personOutline} />
+                <IonLabel>User Account</IonLabel>
+              </IonItem>
+            </IonMenuToggle>
             
             <div style={{ padding: '20px 15px' }}>
-              <IonButton expand="block" color="danger" routerLink="/login">
+              <IonButton expand="block" color="danger" onClick={handleLogout}>
                 <IonIcon slot="start" icon={logOutOutline} />
                 Logout
               </IonButton>
