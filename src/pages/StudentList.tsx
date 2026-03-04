@@ -10,10 +10,23 @@ import {
   IonText,
   IonButton,
   IonIcon,
-  IonButtons
+  IonButtons,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
+  IonPopover,
+  IonList,
+  IonItem,
+  IonLabel
 } from '@ionic/react';
 
-import { arrowBackOutline, printOutline, downloadOutline } from 'ionicons/icons';
+import {
+  arrowBackOutline,
+  printOutline,
+  downloadOutline,
+  funnelOutline
+} from 'ionicons/icons';
+
 import { useLocation, useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
@@ -33,23 +46,41 @@ interface Student {
   year_level: string | null;
   is_ip: boolean;
   ip_group: string | null;
+  created_at: string;
   scholarship_types: { name: string } | null;
 }
+
+const barangays = [
+  "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
+  "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
+  "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
+  "San Miguel","Sankanan","Santiago","Santo Niño",
+  "Tankulan (Pob.)","Ticala"
+];
 
 const StudentList: React.FC = () => {
 
   const location = useLocation();
   const history = useHistory();
   const queryParams = new URLSearchParams(location.search);
-
   const typeQuery = queryParams.get('type');
-  const searchQuery = queryParams.get('query');
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+
+  const [searchText, setSearchText] = useState('');
+  const [selectedBarangay, setSelectedBarangay] = useState('');
+  const [selectedGender, setSelectedGender] = useState('');
+  const [sortOption, setSortOption] = useState('az');
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
     fetchStudents();
-  }, [typeQuery, searchQuery]);
+  }, [typeQuery]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [students, searchText, selectedBarangay, selectedGender, sortOption]);
 
   const fetchStudents = async () => {
 
@@ -69,120 +100,140 @@ const StudentList: React.FC = () => {
       }
     }
 
-    if (searchQuery) {
-      query = query.or(
-        `firstname.ilike.%${searchQuery}%,lastname.ilike.%${searchQuery}%,barangay.ilike.%${searchQuery}%,school.ilike.%${searchQuery}%`
-      );
-    }
-
-    const { data } = await query.order('lastname');
+    const { data } = await query;
     setStudents(data || []);
   };
 
-  /* =========================
-     BACK BUTTON (NO UNDO BUG)
-  ========================== */
+  const applyFilters = () => {
+
+    let data = [...students];
+
+    if (searchText) {
+      data = data.filter(s =>
+        `${s.lastname} ${s.firstname}`
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
+      );
+    }
+
+    if (selectedBarangay) {
+      data = data.filter(s => s.barangay === selectedBarangay);
+    }
+
+    if (selectedGender) {
+      data = data.filter(s => s.gender === selectedGender);
+    }
+
+    switch (sortOption) {
+      case 'az':
+        data.sort((a, b) => a.lastname.localeCompare(b.lastname));
+        break;
+      case 'za':
+        data.sort((a, b) => b.lastname.localeCompare(a.lastname));
+        break;
+      case 'date_desc':
+        data.sort((a, b) =>
+          new Date(b.created_at).getTime() -
+          new Date(a.created_at).getTime()
+        );
+        break;
+      case 'date_asc':
+        data.sort((a, b) =>
+          new Date(a.created_at).getTime() -
+          new Date(b.created_at).getTime()
+        );
+        break;
+    }
+
+    setFilteredStudents(data);
+  };
+
   const handleBack = () => {
     history.replace('/scholarship');
   };
 
-  /* =========================
-     PRINT (DATA ONLY)
-  ========================== */
-  const handlePrint = () => {
+  const resetFilters = () => {
+    setSearchText('');
+    setSelectedBarangay('');
+    setSelectedGender('');
+    setSortOption('az');
+    setShowFilter(false);
+  };
 
+  /* PRINT */
+  const handlePrint = () => {
     const printWindow = window.open('', '', 'width=1000,height=700');
     if (!printWindow) return;
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Student List</title>
-          <style>
-            body { font-family: Arial; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #000; padding: 5px; font-size: 12px; }
-            th { background-color: #f2f2f2; }
-            h2 { text-align: center; }
-          </style>
-        </head>
-        <body>
-          <h2>Scholarship Student List</h2>
-          <p>Date: ${new Date().toLocaleString()}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Barangay</th>
-                <th>Name</th>
-                <th>Gender</th>
-                <th>School</th>
-                <th>Course</th>
-                <th>Year</th>
-                <th>IP</th>
-                <th>Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${students.map(s => `
-                <tr>
-                  <td>${s.barangay}</td>
-                  <td>${s.lastname}, ${s.firstname} ${s.middlename || ''}</td>
-                  <td>${s.gender}</td>
-                  <td>${s.school}</td>
-                  <td>${s.course || '-'}</td>
-                  <td>${s.year_level || '-'}</td>
-                  <td>${s.is_ip ? `IP (${s.ip_group})` : 'Not IP'}</td>
-                  <td>${s.scholarship_types?.name || '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-
+    printWindow.document.write(generateHTMLTable(filteredStudents));
     printWindow.document.close();
     printWindow.print();
   };
 
-  /* =========================
-     REAL PDF DOWNLOAD
-  ========================== */
-  const handleDownloadPDF = () => {
+  const generateHTMLTable = (data: Student[]) => `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial; padding:20px; }
+          table { width:100%; border-collapse:collapse; }
+          th,td { border:1px solid #000; padding:5px; font-size:12px; }
+          th { background:#f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <h2 style="text-align:center">Scholarship Student List</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Barangay</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>School</th>
+              <th>Course</th>
+              <th>Year</th>
+              <th>IP</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(s => `
+              <tr>
+                <td>${s.barangay}</td>
+                <td>${s.lastname}, ${s.firstname}</td>
+                <td>${s.gender}</td>
+                <td>${s.school}</td>
+                <td>${s.course || '-'}</td>
+                <td>${s.year_level || '-'}</td>
+                <td>${s.is_ip ? 'IP' : 'Not IP'}</td>
+                <td>${s.scholarship_types?.name || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
 
+  /* PDF */
+  const handleDownloadPDF = () => {
     const doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text('Scholarship Student List', 105, 15, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Date: ${new Date().toLocaleString()}`, 105, 22, { align: 'center' });
-
-    const tableData = students.map(s => [
+    const tableData = filteredStudents.map(s => [
       s.barangay,
-      `${s.lastname}, ${s.firstname} ${s.middlename || ''}`,
+      `${s.lastname}, ${s.firstname}`,
       s.gender,
       s.school,
       s.course || '-',
       s.year_level || '-',
-      s.is_ip ? `IP (${s.ip_group})` : 'Not IP',
+      s.is_ip ? 'IP' : 'Not IP',
       s.scholarship_types?.name || '-'
     ]);
 
     autoTable(doc, {
-      head: [[
-        'Barangay',
-        'Name',
-        'Gender',
-        'School',
-        'Course',
-        'Year',
-        'IP',
-        'Type'
-      ]],
+      head: [['Barangay','Name','Gender','School','Course','Year','IP','Type']],
       body: tableData,
-      startY: 30,
-      styles: { fontSize: 8 },
+      startY: 20,
+      styles: { fontSize: 8 }
     });
 
     doc.save('scholarship_student_list.pdf');
@@ -193,39 +244,96 @@ const StudentList: React.FC = () => {
 
       <IonHeader>
         <IonToolbar color="primary">
-
-          {/* BACK ICON (LIKE SCHOLARSHIP PAGE) */}
           <IonButtons slot="start">
             <IonButton onClick={handleBack}>
-              <IonIcon icon={arrowBackOutline} />
+              <IonIcon icon={arrowBackOutline}/>
             </IonButton>
           </IonButtons>
 
           <IonTitle>
             {typeQuery ? `${typeQuery.toUpperCase()} Scholars` : 'All Scholars'}
           </IonTitle>
-
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
 
+        {/* ACTION BAR */}
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:'15px'}}>
+
+          <div>
+            <IonButton fill="clear" onClick={handlePrint}>
+              <IonIcon icon={printOutline}/>
+            </IonButton>
+            <IonButton fill="clear" onClick={handleDownloadPDF}>
+              <IonIcon icon={downloadOutline}/>
+            </IonButton>
+          </div>
+
+          <div style={{display:'flex',gap:'8px'}}>
+
+            <IonInput
+              placeholder="Search name..."
+              value={searchText}
+              onIonInput={e => setSearchText(e.detail.value!)}
+              style={{border:'1px solid #ccc',borderRadius:'20px',paddingLeft:'10px'}}
+            />
+
+            <IonButton onClick={() => setShowFilter(true)}>
+              <IonIcon icon={funnelOutline}/> Filter
+            </IonButton>
+
+            <IonSelect
+              value={sortOption}
+              onIonChange={e => setSortOption(e.detail.value)}
+            >
+              <IonSelectOption value="az">A to Z</IonSelectOption>
+              <IonSelectOption value="za">Z to A</IonSelectOption>
+              <IonSelectOption value="date_desc">Newest</IonSelectOption>
+              <IonSelectOption value="date_asc">Oldest</IonSelectOption>
+            </IonSelect>
+
+          </div>
+        </div>
+
+        {/* FILTER */}
+        <IonPopover isOpen={showFilter} onDidDismiss={() => setShowFilter(false)}>
+          <IonList style={{padding:'15px',minWidth:'250px'}}>
+            <IonItem>
+              <IonLabel position="stacked">Barangay</IonLabel>
+              <IonSelect
+                value={selectedBarangay}
+                onIonChange={e => setSelectedBarangay(e.detail.value)}
+              >
+                {barangays.map(b => (
+                  <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Gender</IonLabel>
+              <IonSelect
+                value={selectedGender}
+                onIonChange={e => setSelectedGender(e.detail.value)}
+              >
+                <IonSelectOption value="Male">Male</IonSelectOption>
+                <IonSelectOption value="Female">Female</IonSelectOption>
+              </IonSelect>
+            </IonItem>
+
+            <IonButton expand="block" color="medium" onClick={resetFilters}>
+              Reset
+            </IonButton>
+          </IonList>
+        </IonPopover>
+
         <IonText>
-          <h2>Total Displayed: {students.length}</h2>
+          <h2>Total Displayed: {filteredStudents.length}</h2>
         </IonText>
 
-        {/* PRINT & DOWNLOAD */}
-        <IonButton fill="clear" onClick={handlePrint}>
-          <IonIcon icon={printOutline} slot="icon-only" />
-        </IonButton>
-
-        <IonButton fill="clear" onClick={handleDownloadPDF}>
-          <IonIcon icon={downloadOutline} slot="icon-only" />
-        </IonButton>
-
-        <IonGrid style={{ marginTop: '20px' }}>
-
-          <IonRow style={{ fontWeight: 'bold', borderBottom: '2px solid #000' }}>
+        <IonGrid>
+          <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
             <IonCol>Barangay</IonCol>
             <IonCol>Name</IonCol>
             <IonCol>Gender</IonCol>
@@ -236,25 +344,18 @@ const StudentList: React.FC = () => {
             <IonCol>Type</IonCol>
           </IonRow>
 
-          {students.map(student => (
+          {filteredStudents.map(student => (
             <IonRow key={student.id}>
               <IonCol>{student.barangay}</IonCol>
-              <IonCol>
-                {student.lastname}, {student.firstname} {student.middlename || ''}
-              </IonCol>
+              <IonCol>{student.lastname}, {student.firstname}</IonCol>
               <IonCol>{student.gender}</IonCol>
               <IonCol>{student.school}</IonCol>
               <IonCol>{student.course || '-'}</IonCol>
               <IonCol>{student.year_level || '-'}</IonCol>
-              <IonCol>
-                {student.is_ip ? `IP (${student.ip_group})` : 'Not IP'}
-              </IonCol>
-              <IonCol>
-                {student.scholarship_types?.name || '-'}
-              </IonCol>
+              <IonCol>{student.is_ip ? 'IP' : 'Not IP'}</IonCol>
+              <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
             </IonRow>
           ))}
-
         </IonGrid>
 
       </IonContent>
