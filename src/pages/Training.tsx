@@ -28,17 +28,19 @@ interface Course {
 const courses: Course[] = [
   { name: "Barista", slug: "barista" },
   { name: "Barangay Health Services NCII", slug: "barangay-health" },
+  { name: "Bayong Making", slug: "bayong-making" },
   { name: "Beauty Care (Nail Care, Hair and Make-up)", slug: "beauty-care" },
   { name: "Bread and Pastry Production", slug: "bread-pastry" },
   { name: "Bookkeeping NC III", slug: "bookkeeping-nc3" },
   { name: "Community Nutrition Services", slug: "community-nutrition" },
   { name: "Cookery", slug: "cookery" },
-  { name: "Driving NCII", slug: "driving-nc2" },
-  { name: "Dressmaking NCII", slug: "dressmaking-nc2" },
+  { name: "Driving NC II", slug: "driving-nc2" },
+  { name: "Dressmaking NC II", slug: "dressmaking-nc2" },
   { name: "Electrical Installation and Maintenance NC II", slug: "electrical-nc2" },
-  { name: "Emergency Medical Services NCII", slug: "emergency-medical" },
+  { name: "Emergency Medical Services NC II", slug: "emergency-medical" },
   { name: "Food Processing", slug: "food-processing" },
-  { name: "Garbage Collection NCII", slug: "garbage-collection" },
+  { name: "Garbage Collection NC II", slug: "garbage-collection" },
+  { name: "Housekeeping NC II", slug: "housekeeping-nc2" },
   { name: "Masonry and Hallow Blocks", slug: "masonry-hallow" },
   { name: "Massage Therapy", slug: "massage-therapy" },
   { name: "Organic agriculture NC II", slug: "organic-nc2" },
@@ -46,8 +48,8 @@ const courses: Course[] = [
   { name: "Pineapple Processing", slug: "pineapple-processing" },
   { name: "Scaffolding", slug: "scaffolding" },
   { name: "Security Services NCII", slug: "security-nc2" },
-  { name: "Shielded Metal Arc Welding(SMAW) NC I", slug: "smwa-nc1" },
-  { name: "Shielded Metal Arc Welding(SMAW) NC II", slug: "smwa-nc2" },
+  { name: "Shielded Metal Arc Welding(SMAW) NC I", slug: "smaw-nc1" },
+  { name: "Shielded Metal Arc Welding(SMAW) NC II", slug: "smaw-nc2" },
 ];
 
 const Training: React.FC = () => {
@@ -60,7 +62,14 @@ const Training: React.FC = () => {
   }, []);
 
   const fetchCounts = async () => {
-    const { data, error } = await supabase.from('trainees').select('course');
+    const { data, error } = await supabase
+      .from('trainees')
+      .select(`
+        id,
+        training_types (
+          name
+        )
+      `);
 
     if (error) {
       console.error(error);
@@ -68,15 +77,16 @@ const Training: React.FC = () => {
     }
 
     const counts: { [slug: string]: number } = {};
-    courses.forEach(course => counts[course.slug] = 0);
+    courses.forEach(course => (counts[course.slug] = 0));
 
     data?.forEach((trainee: any) => {
-      const courseObj = courses.find(c => c.name === trainee.course);
+      const trainingName = trainee.training_types?.name;
+      const courseObj = courses.find(c => c.name === trainingName);
       if (courseObj) counts[courseObj.slug]++;
     });
 
     setCourseCounts(counts);
-    setTotalTrainees(data?.length || 0); // total trainees
+    setTotalTrainees(data?.length || 0);
   };
 
   const goToTrainees = (slug: string) => {
@@ -120,7 +130,9 @@ const Training: React.FC = () => {
                   onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '1rem', fontWeight: 'bold' }}>{course.name}</IonCardTitle>
+                    <IonCardTitle style={{ fontSize: '1rem', fontWeight: 'bold' }}>
+                      {course.name}
+                    </IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>
@@ -133,7 +145,7 @@ const Training: React.FC = () => {
           </IonRow>
         </IonGrid>
 
-        {/* Total Trainees - Full Width at Bottom */}
+        {/* Total Trainees */}
         <IonGrid>
           <IonRow>
             <IonCol size="12">
@@ -162,7 +174,6 @@ const Training: React.FC = () => {
             </IonCol>
           </IonRow>
         </IonGrid>
-
       </IonContent>
     </IonPage>
   );

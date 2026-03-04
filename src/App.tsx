@@ -27,23 +27,22 @@ import StudentList from './pages/StudentList';
 import StudentProfile from './pages/StudentProfile';
 import Training from './pages/Training';
 import TraineeList from './pages/TraineeList';
+import TraineeProfile from './pages/TraineeProfile';
 
 setupIonicReact();
 
 const AppContent: React.FC = () => {
   const location = useLocation();
 
-  // Dili nato ipakita ang Menu kung naa sa Login page
   const isLoginPage = location.pathname.includes('/monitoring');
 
   return (
     <IonSplitPane contentId="main" disabled={isLoginPage}>
-      {/* 1. I-render lang ang Menu kung dili login page */}
       {!isLoginPage && <Menu />}
 
-      {/* 2. Main Content Area */}
       <IonRouterOutlet id="main">
-        {/* Default route redirect to Login */}
+
+        {/* Default redirect */}
         <Route exact path="/">
           <Redirect to="/monitoring" />
         </Route>
@@ -56,25 +55,12 @@ const AppContent: React.FC = () => {
         <Route exact path="/students" component={StudentList}/>
         <Route exact path="/training" component={Training}/>
         <Route exact path="/trainees/:slug" component={TraineeList}/>
+        <Route exact path="/student-profile" component={StudentProfile} />
 
-
-        {/* Scholarship Dashboard is now root */}
-        <Route exact path="/">
-          <Scholarship />
-        </Route>
-
-        <Route exact path="/students/:type">
-          <StudentList />
-        </Route>
-
-        <Route exact path="/student-profile">
-          <StudentProfile />
-        </Route>
-
-
-        {/* Child routes for Profiling (Scholarship/Training) */}
+        {/* Profiling children */}
         <Route exact path="/profiling/scholarship" component={StudentProfile} />
-        <Route exact path="/profiling/training" component={Profiling} />
+        <Route exact path="/profiling/training" component={TraineeProfile} />
+
       </IonRouterOutlet>
     </IonSplitPane>
   );

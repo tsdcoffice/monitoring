@@ -15,8 +15,9 @@ import {
   IonButton,
   IonIcon,
   IonInput,
+  IonBackButton
 } from '@ionic/react';
-import { search } from 'ionicons/icons';
+import { arrowBackOutline, search } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
@@ -76,7 +77,7 @@ const Scholarship: React.FC = () => {
     if (!searchText.trim()) return;
 
     history.push(`/students?query=${encodeURIComponent(searchText)}`);
-    setSearchText(''); // ✅ auto clear
+    setSearchText('');
   };
 
   const handleKeyDown = (e: any) => {
@@ -89,6 +90,14 @@ const Scholarship: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
+
+          {/* ✅ SAME BACK BUTTON AS TRAINING */}
+          <IonButtons slot="start">
+            <IonButton routerLink="/dashboard" routerDirection="root">
+              <IonIcon icon={arrowBackOutline} slot="icon-only" />
+            </IonButton>
+          </IonButtons>
+
           <IonTitle>Scholarship Dashboard</IonTitle>
 
           <IonButtons slot="end">
@@ -96,13 +105,14 @@ const Scholarship: React.FC = () => {
               placeholder="Search..."
               value={searchText}
               onIonInput={e => setSearchText(e.detail.value!)}
-              onKeyDown={handleKeyDown}   // ✅ ENTER search
+              onKeyDown={handleKeyDown}
               style={{ maxWidth: '200px', color: '#fff', marginRight: '5px' }}
             />
             <IonButton onClick={handleSearch}>
               <IonIcon icon={search} />
             </IonButton>
           </IonButtons>
+
         </IonToolbar>
       </IonHeader>
 
@@ -137,7 +147,6 @@ const Scholarship: React.FC = () => {
 
           </IonRow>
 
-          {/* ✅ CLICKABLE TOTAL */}
           <IonRow>
             <IonCol size="12">
               <IonCard

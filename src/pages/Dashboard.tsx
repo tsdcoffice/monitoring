@@ -58,22 +58,32 @@ const Dashboard: React.FC = () => {
     setTotalStudents(studentCount || 0);
     setTotalTrainees(traineeCount || 0);
 
-    // GENDER COUNT
-    const { data: genderData } = await supabase
+    /* ==============================
+       FIXED: GENDER COUNT (COMBINED)
+    ============================== */
+
+    const { data: studentGender } = await supabase
       .from('students')
+      .select('gender');
+
+    const { data: traineeGender } = await supabase
+      .from('trainees')
       .select('gender');
 
     let male = 0;
     let female = 0;
 
-    genderData?.forEach((s: any) => {
-      if (s.gender === 'Male') male++;
-      if (s.gender === 'Female') female++;
+    [...(studentGender || []), ...(traineeGender || [])].forEach((person: any) => {
+      if (person.gender === 'Male') male++;
+      if (person.gender === 'Female') female++;
     });
 
     setGenderStats({ male, female });
 
-    // BARANGAY COUNT (Students + Trainees)
+    /* ==============================
+       BARANGAY COUNT (UNCHANGED)
+    ============================== */
+
     const counts = new Array(barangays.length).fill(0);
 
     const { data: studentBarangay } = await supabase

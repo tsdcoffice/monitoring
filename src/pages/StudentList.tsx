@@ -10,11 +10,13 @@ import {
   IonText,
   IonButton,
   IonIcon,
+  IonButtons
 } from '@ionic/react';
+
+import { arrowBackOutline, printOutline, downloadOutline } from 'ionicons/icons';
 import { useLocation, useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { printOutline, downloadOutline } from 'ionicons/icons';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -78,12 +80,18 @@ const StudentList: React.FC = () => {
   };
 
   /* =========================
-     🖨 CLEAN PRINT (DATA ONLY)
+     BACK BUTTON (NO UNDO BUG)
+  ========================== */
+  const handleBack = () => {
+    history.replace('/scholarship');
+  };
+
+  /* =========================
+     PRINT (DATA ONLY)
   ========================== */
   const handlePrint = () => {
 
     const printWindow = window.open('', '', 'width=1000,height=700');
-
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -138,7 +146,7 @@ const StudentList: React.FC = () => {
   };
 
   /* =========================
-     📄 REAL PDF (NOT IMAGE)
+     REAL PDF DOWNLOAD
   ========================== */
   const handleDownloadPDF = () => {
 
@@ -175,7 +183,6 @@ const StudentList: React.FC = () => {
       body: tableData,
       startY: 30,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] },
     });
 
     doc.save('scholarship_student_list.pdf');
@@ -183,11 +190,21 @@ const StudentList: React.FC = () => {
 
   return (
     <IonPage>
+
       <IonHeader>
         <IonToolbar color="primary">
+
+          {/* BACK ICON (LIKE SCHOLARSHIP PAGE) */}
+          <IonButtons slot="start">
+            <IonButton onClick={handleBack}>
+              <IonIcon icon={arrowBackOutline} />
+            </IonButton>
+          </IonButtons>
+
           <IonTitle>
             {typeQuery ? `${typeQuery.toUpperCase()} Scholars` : 'All Scholars'}
           </IonTitle>
+
         </IonToolbar>
       </IonHeader>
 
@@ -197,10 +214,7 @@ const StudentList: React.FC = () => {
           <h2>Total Displayed: {students.length}</h2>
         </IonText>
 
-        <IonButton onClick={() => history.push('/scholarship')}>
-          Back
-        </IonButton>
-
+        {/* PRINT & DOWNLOAD */}
         <IonButton fill="clear" onClick={handlePrint}>
           <IonIcon icon={printOutline} slot="icon-only" />
         </IonButton>
