@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter basename="/monitoring">
+    <IonReactRouter basename="/tsdc_monitoring">
       <AppContent />
     </IonReactRouter>
   </IonApp>
