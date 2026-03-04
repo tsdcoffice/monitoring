@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
             </IonCol>
 
             <IonCol size="12" sizeMd="6">
-              <IonCard button onClick={() => history.push('/profiling/training')}
+              <IonCard button onClick={() => history.push('/training')}
                 style={{ background: 'linear-gradient(135deg, #2dd36f 0%, #52e08a 100%)', borderRadius: '15px' }}>
                 <IonCardHeader>
                   <IonCardTitle style={{ color: 'white' }}>
