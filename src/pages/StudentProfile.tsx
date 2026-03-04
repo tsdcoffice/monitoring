@@ -10,107 +10,170 @@ import {
   IonSelect,
   IonSelectOption,
   IonButton,
-  IonCheckbox,
   IonToast,
 } from '@ionic/react';
 
-import { useState } from 'react';
-import { useHistory } from 'react-router';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-const StudentProfile: React.FC = () => {
-  const history = useHistory();
+interface ScholarshipType {
+  id: string;
+  name: string;
+}
 
-  const [formData, setFormData] = useState({
-    name: '',
-    barangay: '',
+const StudentProfile: React.FC = () => {
+
+  const barangays = [
+    "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
+    "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
+    "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
+    "San Miguel","Sankanan","Santiago","Santo Niño",
+    "Tankulan (Pob.)","Ticala"
+  ];
+
+  const ipTribes = [
+    "BUKIDNON",
+    "HIGAONON",
+    "MANOBO",
+    "MATIGSALUG",
+    "TALAANDIG",
+    "TIGWAHANON",
+    "UMAYAMNON"
+  ];
+
+  const initialFormState = {
+    lastname: '',
+    firstname: '',
+    middlename: '',
     gender: '',
+    barangay: '',
     school: '',
     course: '',
-    year: '',
-    ip: false,
-    type: '',
-  });
+    year_level: '',
+    is_ip: false,
+    ip_group: '',
+    scholarship_type_id: ''
+  };
 
+  const [formData, setFormData] = useState(initialFormState);
+  const [scholarshipTypes, setScholarshipTypes] = useState<ScholarshipType[]>([]);
   const [showToast, setShowToast] = useState(false);
 
+  useEffect(() => {
+    fetchScholarshipTypes();
+  }, []);
+
+  const fetchScholarshipTypes = async () => {
+    const { data, error } = await supabase
+      .from('scholarship_types')
+      .select('*')
+      .order('name');
+
+    if (!error && data) {
+      setScholarshipTypes(data);
+    }
+  };
+
   const handleChange = (field: string, value: any) => {
+
+    // Fields nga gusto nato i ALL CAPS
+    const uppercaseFields = [
+      'lastname',
+      'firstname',
+      'middlename',
+      'school',
+      'course',
+      'ip_group'
+    ];
+
+    if (uppercaseFields.includes(field) && value) {
+      value = value.toUpperCase();
+    }
+
     setFormData({ ...formData, [field]: value });
   };
 
   const saveStudent = async () => {
+
     if (
-      !formData.name ||
-      !formData.barangay ||
+      !formData.lastname ||
+      !formData.firstname ||
       !formData.gender ||
+      !formData.barangay ||
       !formData.school ||
-      !formData.course ||
-      !formData.year ||
-      !formData.type
+      !formData.year_level ||
+      !formData.scholarship_type_id
     ) {
-      alert('Please fill in all required fields.');
+      alert("Please fill in all required fields.");
       return;
     }
 
-    const { error } = await supabase
-      .from('students')
-      .insert([formData]);
+    if (formData.is_ip && !formData.ip_group) {
+      alert("Please select IP Tribe.");
+      return;
+    }
+
+    const { error } = await supabase.from('students').insert([
+      formData
+    ]);
 
     if (error) {
       console.error(error);
-      alert('Error saving student.');
+      alert("Error saving student.");
       return;
     }
 
     setShowToast(true);
 
-    // Reset form
-    setFormData({
-      name: '',
-      barangay: '',
-      gender: '',
-      school: '',
-      course: '',
-      year: '',
-      ip: false,
-      type: '',
-    });
-
-    // Redirect after short delay
-    setTimeout(() => {
-      history.push('/');
-    }, 1000);
+    // RESET FORM
+    setFormData(initialFormState);
   };
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
-          <IonTitle>Student Profiling Form</IonTitle>
+          <IonTitle>Student Profiling</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
 
+        {/* LASTNAME */}
         <IonItem>
-          <IonLabel position="stacked">Full Name *</IonLabel>
+          <IonLabel position="stacked">Last Name *</IonLabel>
           <IonInput
-            value={formData.name}
-            onIonChange={e => handleChange('name', e.detail.value)}
+            placeholder="LASTNAME"
+            value={formData.lastname}
+            onIonChange={e => handleChange('lastname', e.detail.value)}
           />
         </IonItem>
 
+        {/* FIRSTNAME */}
         <IonItem>
-          <IonLabel position="stacked">Barangay Address *</IonLabel>
+          <IonLabel position="stacked">First Name *</IonLabel>
           <IonInput
-            value={formData.barangay}
-            onIonChange={e => handleChange('barangay', e.detail.value)}
+            placeholder="FIRSTNAME"
+            value={formData.firstname}
+            onIonChange={e => handleChange('firstname', e.detail.value)}
           />
         </IonItem>
 
+        {/* MIDDLENAME */}
+        <IonItem>
+          <IonLabel position="stacked">Middle Name</IonLabel>
+          <IonInput
+            placeholder="MIDDLENAME"
+            value={formData.middlename}
+            onIonChange={e => handleChange('middlename', e.detail.value)}
+          />
+        </IonItem>
+
+        {/* GENDER */}
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>
           <IonSelect
+            interface="popover"
             value={formData.gender}
             onIonChange={e => handleChange('gender', e.detail.value)}
           >
@@ -119,63 +182,105 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
+        {/* BARANGAY */}
+        <IonItem>
+          <IonLabel position="stacked">Barangay Address *</IonLabel>
+          <IonSelect
+            interface="popover"
+            value={formData.barangay}
+            onIonChange={e => handleChange('barangay', e.detail.value)}
+          >
+            {barangays.map(b => (
+              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
+
+        {/* SCHOOL */}
         <IonItem>
           <IonLabel position="stacked">School Name *</IonLabel>
           <IonInput
+            placeholder="DON'T ABBREVIATE"
             value={formData.school}
             onIonChange={e => handleChange('school', e.detail.value)}
           />
         </IonItem>
 
+        {/* COURSE */}
         <IonItem>
           <IonLabel position="stacked">Course *</IonLabel>
           <IonInput
+            placeholder="DON'T ABBREVIATE"
             value={formData.course}
             onIonChange={e => handleChange('course', e.detail.value)}
           />
         </IonItem>
 
+        {/* YEAR LEVEL */}
         <IonItem>
           <IonLabel position="stacked">Year Level *</IonLabel>
-          <IonInput
-            value={formData.year}
-            onIonChange={e => handleChange('year', e.detail.value)}
-          />
+          <IonSelect
+            interface="popover"
+            value={formData.year_level}
+            onIonChange={e => handleChange('year_level', e.detail.value)}
+          >
+            <IonSelectOption value="1st Year">1st Year</IonSelectOption>
+            <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
+            <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
+            <IonSelectOption value="4th Year">4th Year</IonSelectOption>
+            <IonSelectOption value="5th Year">5th Year</IonSelectOption>
+          </IonSelect>
         </IonItem>
 
+        {/* IP YES/NO */}
         <IonItem>
-          <IonLabel>IP (Indigenous Person)</IonLabel>
-          <IonCheckbox
-            checked={formData.ip}
-            onIonChange={e => handleChange('ip', e.detail.checked)}
-          />
+          <IonLabel position="stacked">Are you IP?</IonLabel>
+          <IonSelect
+            interface="popover"
+            value={formData.is_ip}
+            onIonChange={e => handleChange('is_ip', e.detail.value)}
+          >
+            <IonSelectOption value={true}>Yes</IonSelectOption>
+            <IonSelectOption value={false}>No</IonSelectOption>
+          </IonSelect>
         </IonItem>
 
+        {/* IP TRIBE */}
+        {formData.is_ip && (
+          <IonItem>
+            <IonLabel position="stacked">IP Tribe *</IonLabel>
+            <IonSelect
+              interface="popover"
+              value={formData.ip_group}
+              onIonChange={e => handleChange('ip_group', e.detail.value)}
+            >
+              {ipTribes.map(tribe => (
+                <IonSelectOption key={tribe} value={tribe}>
+                  {tribe}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+        )}
+
+        {/* SCHOLARSHIP TYPE */}
         <IonItem>
           <IonLabel position="stacked">Type of Scholarship *</IonLabel>
           <IonSelect
-            value={formData.type}
-            onIonChange={e => handleChange('type', e.detail.value)}
+            interface="popover"
+            value={formData.scholarship_type_id}
+            onIonChange={e => handleChange('scholarship_type_id', e.detail.value)}
           >
-            <IonSelectOption value="shs">SHS</IonSelectOption>
-            <IonSelectOption value="jhs">JHS</IonSelectOption>
-            <IonSelectOption value="college">College</IonSelectOption>
-            <IonSelectOption value="als">ALS</IonSelectOption>
-            <IonSelectOption value="medicine">Medicine</IonSelectOption>
-            <IonSelectOption value="law">Law</IonSelectOption>
+            {scholarshipTypes.map(type => (
+              <IonSelectOption key={type.id} value={type.id}>
+                {type.name}
+              </IonSelectOption>
+            ))}
           </IonSelect>
         </IonItem>
 
         <IonButton expand="block" onClick={saveStudent} className="ion-margin-top">
           Save Student
-        </IonButton>
-
-        <IonButton
-          expand="block"
-          color="medium"
-          onClick={() => history.push('/')}
-        >
-          Cancel
         </IonButton>
 
         <IonToast

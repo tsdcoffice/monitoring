@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
 
 
         {/* Child routes for Profiling (Scholarship/Training) */}
-        <Route exact path="/profiling/scholarship" component={Profiling} />
+        <Route exact path="/profiling/scholarship" component={StudentProfile} />
         <Route exact path="/profiling/training" component={Profiling} />
       </IonRouterOutlet>
     </IonSplitPane>

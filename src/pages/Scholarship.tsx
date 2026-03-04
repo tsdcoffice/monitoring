@@ -11,7 +11,6 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonText,
   IonButtons,
   IonButton,
   IonIcon,
@@ -22,70 +21,68 @@ import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
-const Scholarship: React.FC = () => {
-  const history = useHistory();
-  const [scholarStats, setScholarStats] = useState({
-    als: 0,
-    college: 0,
-    law: 0,
-    medicine: 0,
-    shs: 0,
-  });
+interface ScholarshipType {
+  id: string;
+  name: string;
+}
 
+const Scholarship: React.FC = () => {
+
+  const history = useHistory();
+  const [types, setTypes] = useState<ScholarshipType[]>([]);
+  const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
-    fetchCounts();
+    fetchScholarshipData();
   }, []);
 
-  const fetchCounts = async () => {
-    const { data, error } = await supabase.from('students').select('type');
+  const fetchScholarshipData = async () => {
 
-    if (error) {
-      console.error(error);
-      return;
+    const { data: typeData } = await supabase
+      .from('scholarship_types')
+      .select('*')
+      .order('name');
+
+    if (!typeData) return;
+
+    setTypes(typeData);
+
+    const newCounts: { [key: string]: number } = {};
+
+    for (const type of typeData) {
+      const { count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .eq('scholarship_type_id', type.id);
+
+      newCounts[type.name] = count || 0;
     }
 
-    const counts = {
-      als: 0,
-      college: 0,
-      law: 0,
-      medicine: 0,
-      shs: 0,
-    };
-
-    data?.forEach((student: any) => {
-      if (counts.hasOwnProperty(student.type)) {
-        counts[student.type as keyof typeof counts]++;
-      }
-    });
-
-    setScholarStats(counts);
+    setCounts(newCounts);
   };
 
-  const totalScholars =
-    scholarStats.als +
-    scholarStats.college +
-    scholarStats.law +
-    scholarStats.medicine +
-    scholarStats.shs;
+  const totalScholars = Object.values(counts).reduce((a, b) => a + b, 0);
 
-  const goToStudents = (type: string) => {
-    history.push(`/students/${type}`);
-  };
-
-  const cardColors: { [key: string]: string } = {
-    als: '#6367FF',
-    college: '#8494FF',
-    law: '#C9BEFF',
-    medicine: '#FFDBFD',
-    shs: '#6367FF',
-    total: '#8494FF',
+  const goToStudents = (typeName?: string) => {
+    if (!typeName) {
+      history.push('/students');
+    } else {
+      history.push(`/students?type=${encodeURIComponent(typeName)}`);
+    }
   };
 
   const handleSearch = () => {
-    if (searchText.trim() === '') return;
+    if (!searchText.trim()) return;
+
     history.push(`/students?query=${encodeURIComponent(searchText)}`);
+    setSearchText(''); // ✅ auto clear
+  };
+
+  const handleKeyDown = (e: any) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   return (
@@ -94,12 +91,12 @@ const Scholarship: React.FC = () => {
         <IonToolbar color="primary">
           <IonTitle>Scholarship Dashboard</IonTitle>
 
-          {/* Search bar */}
           <IonButtons slot="end">
             <IonInput
               placeholder="Search..."
               value={searchText}
               onIonInput={e => setSearchText(e.detail.value!)}
+              onKeyDown={handleKeyDown}   // ✅ ENTER search
               style={{ maxWidth: '200px', color: '#fff', marginRight: '5px' }}
             />
             <IonButton onClick={handleSearch}>
@@ -109,77 +106,62 @@ const Scholarship: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen className="ion-padding">
-        <IonText>
-          <h2 style={{ textAlign: 'center' }}>
-          
-          </h2>
-        </IonText>
+      <IonContent className="ion-padding">
 
         <IonGrid>
           <IonRow>
-            {Object.entries(scholarStats).map(([key, value]) => (
-              <IonCol size="12" sizeMd="4" key={key}>
+
+            {types.map((type) => (
+              <IonCol size="12" sizeMd="4" key={type.id}>
                 <IonCard
                   button
-                  onClick={() => goToStudents(key)}
+                  onClick={() => goToStudents(type.name)}
                   style={{
                     textAlign: 'center',
-                    backgroundColor: cardColors[key],
-                    color: '#ffffff',
+                    backgroundColor: '#6367FF',
+                    color: '#fff',
                     borderRadius: '15px',
                   }}
                 >
                   <IonCardHeader>
-                    <IonCardTitle>{key.toUpperCase()} Scholars</IonCardTitle>
+                    <IonCardTitle>{type.name} Scholars</IonCardTitle>
                   </IonCardHeader>
-
                   <IonCardContent>
-                    <h1
-                      style={{
-                        fontSize: '2.5rem',
-                        fontWeight: 'bold',
-                        margin: 0,
-                      }}
-                    >
-                      {value}
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0 }}>
+                      {counts[type.name] || 0}
                     </h1>
                   </IonCardContent>
                 </IonCard>
               </IonCol>
             ))}
+
           </IonRow>
 
+          {/* ✅ CLICKABLE TOTAL */}
           <IonRow>
             <IonCol size="12">
               <IonCard
                 button
-                onClick={() => goToStudents('all')}
+                onClick={() => goToStudents()}
                 style={{
                   textAlign: 'center',
-                  backgroundColor: cardColors.total,
-                  color: '#ffffff',
+                  backgroundColor: '#8494FF',
+                  color: '#fff',
                   borderRadius: '15px',
                 }}
               >
                 <IonCardHeader>
                   <IonCardTitle>Total Scholars</IonCardTitle>
                 </IonCardHeader>
-
                 <IonCardContent>
-                  <h1
-                    style={{
-                      fontSize: '2.5rem',
-                      fontWeight: 'bold',
-                      margin: 0,
-                    }}
-                  >
+                  <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0 }}>
                     {totalScholars}
                   </h1>
                 </IonCardContent>
               </IonCard>
             </IonCol>
           </IonRow>
+
         </IonGrid>
       </IonContent>
     </IonPage>

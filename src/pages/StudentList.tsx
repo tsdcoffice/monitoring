@@ -11,99 +11,174 @@ import {
   IonButton,
   IonIcon,
 } from '@ionic/react';
-import { useLocation, useParams, useHistory } from 'react-router-dom';
-import { ReactNode, useEffect, useState, useRef } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { printOutline, downloadOutline } from 'ionicons/icons';
 
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 interface Student {
-  gender: ReactNode;
   id: string;
-  name: string;
+  firstname: string;
+  lastname: string;
+  middlename: string | null;
+  gender: string;
   barangay: string;
   school: string;
   course: string | null;
-  type: string;
-  year: string | null;
-  ip: boolean;
+  year_level: string | null;
+  is_ip: boolean;
+  ip_group: string | null;
+  scholarship_types: { name: string } | null;
 }
 
 const StudentList: React.FC = () => {
-  const { type } = useParams<{ type: string }>();
+
   const location = useLocation();
   const history = useHistory();
   const queryParams = new URLSearchParams(location.search);
-  const searchQuery = queryParams.get('query') || '';
+
+  const typeQuery = queryParams.get('type');
+  const searchQuery = queryParams.get('query');
 
   const [students, setStudents] = useState<Student[]>([]);
-  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      let query = supabase.from('students').select('*');
-
-      if (type && type !== 'all') query = query.eq('type', type);
-
-      if (searchQuery) {
-        query = query.or(
-          `name.ilike.%${searchQuery}%,barangay.ilike.%${searchQuery}%,school.ilike.%${searchQuery}%,course.ilike.%${searchQuery}%,type.ilike.%${searchQuery}%`
-        );
-      }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error(error);
-        return;
-      }
-      setStudents(data || []);
-    };
-
     fetchStudents();
-  }, [type, searchQuery]);
+  }, [typeQuery, searchQuery]);
 
-  const handleDownloadPDF = async () => {
-    if (!tableRef.current) return;
+  const fetchStudents = async () => {
 
-    try {
-      const clone = tableRef.current.cloneNode(true) as HTMLElement;
-      clone.style.background = '#ffffff';
-      clone.style.width = `${tableRef.current.offsetWidth}px`;
-      clone.style.padding = '10px';
-      clone.style.color = '#000000';
+    let query = supabase
+      .from('students')
+      .select(`*, scholarship_types(name)`);
 
-      document.body.appendChild(clone);
-      const canvas = await html2canvas(clone, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      document.body.removeChild(clone);
+    if (typeQuery) {
+      const { data: typeData } = await supabase
+        .from('scholarship_types')
+        .select('id')
+        .eq('name', typeQuery)
+        .single();
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 10;
-      const pdfWidth = pageWidth - margin * 2;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.setFontSize(16);
-      pdf.text('Scholarship Student List', pageWidth / 2, 15, { align: 'center' });
-      pdf.setFontSize(10);
-      pdf.text(`Date: ${new Date().toLocaleString()}`, pageWidth / 2, 22, { align: 'center' });
-
-      pdf.addImage(imgData, 'PNG', margin, 30, pdfWidth, pdfHeight);
-      pdf.save('scholarship_student_list.pdf');
-    } catch (error) {
-      console.error('PDF download failed:', error);
+      if (typeData) {
+        query = query.eq('scholarship_type_id', typeData.id);
+      }
     }
+
+    if (searchQuery) {
+      query = query.or(
+        `firstname.ilike.%${searchQuery}%,lastname.ilike.%${searchQuery}%,barangay.ilike.%${searchQuery}%,school.ilike.%${searchQuery}%`
+      );
+    }
+
+    const { data } = await query.order('lastname');
+    setStudents(data || []);
   };
 
+  /* =========================
+     🖨 CLEAN PRINT (DATA ONLY)
+  ========================== */
   const handlePrint = () => {
-    if (!tableRef.current) return;
-    const printContents = tableRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
+
+    const printWindow = window.open('', '', 'width=1000,height=700');
+
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Student List</title>
+          <style>
+            body { font-family: Arial; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000; padding: 5px; font-size: 12px; }
+            th { background-color: #f2f2f2; }
+            h2 { text-align: center; }
+          </style>
+        </head>
+        <body>
+          <h2>Scholarship Student List</h2>
+          <p>Date: ${new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Barangay</th>
+                <th>Name</th>
+                <th>Gender</th>
+                <th>School</th>
+                <th>Course</th>
+                <th>Year</th>
+                <th>IP</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(s => `
+                <tr>
+                  <td>${s.barangay}</td>
+                  <td>${s.lastname}, ${s.firstname} ${s.middlename || ''}</td>
+                  <td>${s.gender}</td>
+                  <td>${s.school}</td>
+                  <td>${s.course || '-'}</td>
+                  <td>${s.year_level || '-'}</td>
+                  <td>${s.is_ip ? `IP (${s.ip_group})` : 'Not IP'}</td>
+                  <td>${s.scholarship_types?.name || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  /* =========================
+     📄 REAL PDF (NOT IMAGE)
+  ========================== */
+  const handleDownloadPDF = () => {
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('Scholarship Student List', 105, 15, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 105, 22, { align: 'center' });
+
+    const tableData = students.map(s => [
+      s.barangay,
+      `${s.lastname}, ${s.firstname} ${s.middlename || ''}`,
+      s.gender,
+      s.school,
+      s.course || '-',
+      s.year_level || '-',
+      s.is_ip ? `IP (${s.ip_group})` : 'Not IP',
+      s.scholarship_types?.name || '-'
+    ]);
+
+    autoTable(doc, {
+      head: [[
+        'Barangay',
+        'Name',
+        'Gender',
+        'School',
+        'Course',
+        'Year',
+        'IP',
+        'Type'
+      ]],
+      body: tableData,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save('scholarship_student_list.pdf');
   };
 
   return (
@@ -111,61 +186,63 @@ const StudentList: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>
-            {type === 'all' || !type ? 'All Scholars' : `${type.toUpperCase()} Scholars`}
+            {typeQuery ? `${typeQuery.toUpperCase()} Scholars` : 'All Scholars'}
           </IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
+
         <IonText>
           <h2>Total Displayed: {students.length}</h2>
         </IonText>
 
-        <IonButton onClick={() => history.push('/scholarship')}>Back to Dashboard</IonButton>
-         <IonButton color="secondary" fill="clear" onClick={handlePrint}>
-            <IonIcon icon={printOutline} slot="icon-only" />
-          </IonButton>
-          <IonButton color="tertiary" fill="clear" onClick={handleDownloadPDF}>
-            <IonIcon icon={downloadOutline} slot="icon-only" />
-          </IonButton>
+        <IonButton onClick={() => history.push('/scholarship')}>
+          Back
+        </IonButton>
 
-        {/* Table container */}
-        <div ref={tableRef} style={{ marginTop: '15px' }}>
-          <IonGrid>
-            <IonRow
-              style={{
-                fontWeight: 'bold',
-                borderBottom: '2px solid #333',
-                backgroundColor: '#f2f2f2',
-              }}
-            >
-              <IonCol>Barangay</IonCol>
-              <IonCol>Name</IonCol>
-              <IonCol>Gender</IonCol>
-              <IonCol>School</IonCol>
-              <IonCol>Course</IonCol>
-              <IonCol>Year</IonCol>
-              <IonCol>IP</IonCol>
-              <IonCol>Type</IonCol>
+        <IonButton fill="clear" onClick={handlePrint}>
+          <IonIcon icon={printOutline} slot="icon-only" />
+        </IonButton>
+
+        <IonButton fill="clear" onClick={handleDownloadPDF}>
+          <IonIcon icon={downloadOutline} slot="icon-only" />
+        </IonButton>
+
+        <IonGrid style={{ marginTop: '20px' }}>
+
+          <IonRow style={{ fontWeight: 'bold', borderBottom: '2px solid #000' }}>
+            <IonCol>Barangay</IonCol>
+            <IonCol>Name</IonCol>
+            <IonCol>Gender</IonCol>
+            <IonCol>School</IonCol>
+            <IonCol>Course</IonCol>
+            <IonCol>Year</IonCol>
+            <IonCol>IP</IonCol>
+            <IonCol>Type</IonCol>
+          </IonRow>
+
+          {students.map(student => (
+            <IonRow key={student.id}>
+              <IonCol>{student.barangay}</IonCol>
+              <IonCol>
+                {student.lastname}, {student.firstname} {student.middlename || ''}
+              </IonCol>
+              <IonCol>{student.gender}</IonCol>
+              <IonCol>{student.school}</IonCol>
+              <IonCol>{student.course || '-'}</IonCol>
+              <IonCol>{student.year_level || '-'}</IonCol>
+              <IonCol>
+                {student.is_ip ? `IP (${student.ip_group})` : 'Not IP'}
+              </IonCol>
+              <IonCol>
+                {student.scholarship_types?.name || '-'}
+              </IonCol>
             </IonRow>
+          ))}
 
-            {students.map(student => (
-              <IonRow key={student.id} style={{ borderBottom: '1px solid #ccc' }}>
-                <IonCol>{student.barangay}</IonCol>
-                <IonCol>{student.name}</IonCol>
-                <IonCol>{student.gender}</IonCol>
-                <IonCol>{student.school}</IonCol>
-                <IonCol>{student.course || '-'}</IonCol>
-                <IonCol>{student.year || '-'}</IonCol>
-                <IonCol>{student.ip ? 'IP' : 'Not IP'}</IonCol>
-                <IonCol>{student.type.toUpperCase()}</IonCol>
-              </IonRow>
-            ))}
-          </IonGrid>
-        </div>
+        </IonGrid>
 
-        {/* Icon Buttons at bottom-left */}
-       
       </IonContent>
     </IonPage>
   );
