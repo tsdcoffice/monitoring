@@ -32,7 +32,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   // Dili nato ipakita ang Menu kung naa sa Login page
-  const isLoginPage = location.pathname === '/monitoring';
+  const isLoginPage = location.pathname.includes('/monitoring');
 
   return (
     <IonSplitPane contentId="main" disabled={isLoginPage}>
