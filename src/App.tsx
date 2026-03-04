@@ -32,7 +32,7 @@ const AppContent: React.FC = () => {
   const location = useLocation();
 
   // Dili nato ipakita ang Menu kung naa sa Login page
-  const isLoginPage = location.pathname === '/monitoring';
+  const isLoginPage = location.pathname.includes('/monitoring');
 
   return (
     <IonSplitPane contentId="main" disabled={isLoginPage}>
@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
 
 
         {/* Child routes for Profiling (Scholarship/Training) */}
-        <Route exact path="/profiling/scholarship" component={Profiling} />
+        <Route exact path="/profiling/scholarship" component={StudentProfile} />
         <Route exact path="/profiling/training" component={Profiling} />
       </IonRouterOutlet>
     </IonSplitPane>
@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter basename="/monitoring">
+    <IonReactRouter basename="/tsdc_monitoring">
       <AppContent />
     </IonReactRouter>
   </IonApp>
