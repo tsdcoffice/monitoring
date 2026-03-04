@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
         <IonGrid className="ion-no-padding">
           <IonRow>
             <IonCol size="12" sizeMd="6">
-              <IonCard button onClick={() => history.push('profiling/scholarship')} 
+              <IonCard button onClick={() => history.push('/scholarship')} 
                 style={{ background: 'linear-gradient(135deg, #3880ff 0%, #6096ff 100%)', borderRadius: '15px' }}>
                 <IonCardHeader>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -111,7 +111,7 @@ const Dashboard: React.FC = () => {
             </IonCol>
 
             <IonCol size="12" sizeMd="6">
-              <IonCard button onClick={() => history.push('/profiling/training')} 
+              <IonCard button onClick={() => history.push('/training')} 
                 style={{ background: 'linear-gradient(135deg, #2dd36f 0%, #52e08a 100%)', borderRadius: '15px' }}>
                 <IonCardHeader>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -20,11 +20,14 @@ import './theme/variables.css';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Menu from './pages/Menu'; 
-import Profiling from './pages/Profiling';
+import Profiling from './pages/Training';
 import UserAccount from './pages/UserAccount';
 import Scholarship from './pages/Scholarship';
 import StudentList from './pages/StudentList';
 import StudentProfile from './pages/StudentProfile';
+import Training from './pages/Training';
+import TraineeList from './pages/TraineeList';
+
 
 setupIonicReact();
 
@@ -52,6 +55,9 @@ const AppContent: React.FC = () => {
         <Route exact path="/account" component={UserAccount} />
         <Route exact path="/scholarship" component={Scholarship}/>
         <Route exact path="/students" component={StudentList}/>
+        <Route exact path="/training" component={Training} />
+        <Route exact path="/trainees/:slug" component={TraineeList} />
+
         
         {/* Scholarship Dashboard is now root */}
         <Route exact path="/">
@@ -69,7 +75,7 @@ const AppContent: React.FC = () => {
 
         {/* Child routes for Profiling (Scholarship/Training) */}
         <Route exact path="/profiling/scholarship" component={StudentProfile} />
-        <Route exact path="/profiling/training" component={Profiling} />
+        <Route exact path="/profiling/training" component={StudentProfile} />
       </IonRouterOutlet>
     </IonSplitPane>
   );
