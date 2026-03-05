@@ -9,10 +9,11 @@ import {
   IonCard,
   IonCardContent,
   IonSpinner,
-  IonIcon
+  IonIcon,
+  useIonViewWillEnter
 } from "@ionic/react";
 import { eyeOutline, eyeOffOutline } from "ionicons/icons";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
@@ -29,6 +30,18 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const passwordRef = useRef<HTMLIonInputElement>(null);
+
+  // Clear inputs when login page loads
+useEffect(() => {
+  setEmail("");
+  setPassword("");
+}, []);
+
+  // Clear inputs every time Login page opens (important for Ionic)
+useIonViewWillEnter(() => {
+  setEmail("");
+  setPassword("");
+});
 
   const handleLogin = async () => {
     if (!email || !password) {
