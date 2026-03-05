@@ -74,6 +74,10 @@ const StudentList: React.FC = () => {
   const [selectedGender, setSelectedGender] = useState('');
   const [sortOption, setSortOption] = useState('az');
   const [showFilter, setShowFilter] = useState(false);
+  const [filterType, setFilterType] = useState('');
+  const [selectedIP, setSelectedIP] = useState('');
+  const [selectedSchool, setSelectedSchool] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
 
   useEffect(() => {
     fetchStudents();
@@ -81,7 +85,16 @@ const StudentList: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [students, searchText, selectedBarangay, selectedGender, sortOption]);
+  }, [
+    students,
+    searchText,
+    selectedBarangay,
+    selectedGender,
+    selectedIP,
+    selectedSchool,
+    selectedCourse,
+    sortOption
+  ]);
 
   const fetchStudents = async () => {
 
@@ -128,6 +141,20 @@ const StudentList: React.FC = () => {
 
     if (selectedGender) {
       data = data.filter(s => s.gender === selectedGender);
+    }
+
+    if (selectedIP) {
+      data = data.filter(s =>
+        selectedIP === 'IP' ? s.is_ip === true : s.is_ip === false
+      );
+    }
+
+    if (selectedSchool) {
+      data = data.filter(s => s.school === selectedSchool);
+    }
+
+    if (selectedCourse) {
+      data = data.filter(s => s.course === selectedCourse);
     }
 
     switch (sortOption) {
@@ -319,16 +346,98 @@ const StudentList: React.FC = () => {
             </IonItem>
 
             <IonItem>
-              <IonLabel position="stacked">Gender</IonLabel>
+              <IonLabel position="stacked">Filter Type</IonLabel>
               <IonSelect
                 interface="popover"
-                value={selectedGender}
-                onIonChange={e => setSelectedGender(e.detail.value)}
+                value={filterType}
+                onIonChange={e => {
+                  setFilterType(e.detail.value);
+                  setSelectedGender('');
+                  setSelectedIP('');
+                  setSelectedSchool('');
+                  setSelectedCourse('');
+                }}
               >
-                <IonSelectOption value="Male">Male</IonSelectOption>
-                <IonSelectOption value="Female">Female</IonSelectOption>
+                <IonSelectOption value="gender">Gender</IonSelectOption>
+                <IonSelectOption value="ip">IP</IonSelectOption>
+                <IonSelectOption value="school">School</IonSelectOption>
+                <IonSelectOption value="course">Course</IonSelectOption>
               </IonSelect>
             </IonItem>
+
+            {filterType === 'gender' && (
+<IonItem>
+  <IonLabel position="stacked">Gender</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedGender}
+    onIonChange={e => {
+      setSelectedGender(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    <IonSelectOption value="Male">Male</IonSelectOption>
+    <IonSelectOption value="Female">Female</IonSelectOption>
+  </IonSelect>
+</IonItem>
+)}
+
+{filterType === 'ip' && (
+<IonItem>
+  <IonLabel position="stacked">IP</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedIP}
+    onIonChange={e => {
+      setSelectedIP(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    <IonSelectOption value="IP">IP</IonSelectOption>
+    <IonSelectOption value="NOT_IP">Not IP</IonSelectOption>
+  </IonSelect>
+</IonItem>
+)}
+
+{filterType === 'school' && (
+<IonItem>
+  <IonLabel position="stacked">School</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedSchool}
+    onIonChange={e => {
+      setSelectedSchool(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    {[...new Set(students.map(s => s.school))].map(school => (
+      <IonSelectOption key={school} value={school}>
+        {school}
+      </IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
+)}
+
+{filterType === 'course' && (
+<IonItem>
+  <IonLabel position="stacked">Course</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedCourse}
+    onIonChange={e => {
+      setSelectedCourse(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    {[...new Set(students.map(s => s.course).filter(Boolean))].map(course => (
+      <IonSelectOption key={course} value={course}>
+        {course}
+      </IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
+)}
 
             <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
               <IonButton expand="block" color="medium" onClick={resetFilters}>
@@ -336,7 +445,7 @@ const StudentList: React.FC = () => {
               </IonButton>
 
               <IonButton expand="block" onClick={() => setShowFilter(false)}>
-                OK
+                Ok
               </IonButton>
             </div>
 

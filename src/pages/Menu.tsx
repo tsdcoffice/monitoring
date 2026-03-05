@@ -30,7 +30,7 @@ const Menu: React.FC = () => {
   const handleLogout = () => {
     // I-clear ang session kung naa man gani (e.g., localStorage.clear())
     // Unya i-redirect pabalik sa login screen
-    history.replace('/monitoring');
+    history.replace('/login');
   };
 
   const startResizing = (e: React.MouseEvent) => {
