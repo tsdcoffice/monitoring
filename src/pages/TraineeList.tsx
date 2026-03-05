@@ -37,6 +37,33 @@ interface TrainingType {
   name: string;
 }
 
+const courseSlugMap: { [slug: string]: string } = {
+  "barista": "Barista",
+  "barangay-health": "Barangay Health Services NCII",
+  "bayong-making": "Bayong Making",
+  "beauty-care": "Beauty Care (Nail Care, Hair and Make-up)",
+  "bread-pastry": "Bread and Pastry Production",
+  "bookkeeping-nc3": "Bookkeeping NC III",
+  "community-nutrition": "Community Nutrition Services",
+  "cookery": "Cookery",
+  "driving-nc2": "Driving NC II",
+  "dressmaking-nc2": "Dressmaking NC II",
+  "electrical-nc2": "Electrical Installation and Maintenance NC II",
+  "emergency-medical": "Emergency Medical Services NC II",
+  "food-processing": "Food Processing",
+  "garbage-collection": "Garbage Collection NC II",
+  "housekeeping-nc2": "Housekeeping NC II",
+  "masonry-hallow": "Masonry and Hallow Blocks",
+  "massage-therapy": "Massage Therapy",
+  "organic-nc2": "Organic agriculture NC II",
+  "plumbing": "Plumbing",
+  "pineapple-processing": "Pineapple Processing",
+  "scaffolding": "Scaffolding",
+  "security-nc2": "Security Services NCII",
+  "smaw-nc1": "Shielded Metal Arc Welding(SMAW) NC I",
+  "smaw-nc2": "Shielded Metal Arc Welding(SMAW) NC II"
+};
+
 const barangays = [
   "Agusan Canyon","Alae","Dahilayan","Guilang-Guilang","Kalugmanan",
   "Lingion","Lunocan","Maluko","Mampayag","Mantibugao",
@@ -106,16 +133,22 @@ const TraineeList: React.FC = () => {
       let query = supabase.from('trainees').select('*');
 
       if (slug && slug !== 'all') {
-        const formatted = slug.replace(/-/g, ' ');
+
+        const trainingName = courseSlugMap[slug];
+
         const { data: typeData } = await supabase
           .from('training_types')
           .select('id')
-          .ilike('name', formatted)
+          .eq('name', trainingName)
           .single();
 
-        if (typeData) {
-          query = query.eq('training_type_id', typeData.id);
+        if (!typeData) {
+          setTrainees([]);
+          return;
         }
+          query = query.eq('training_type_id', typeData.id);
+        
+
       }
 
         if (debouncedSearch || urlSearch) {
