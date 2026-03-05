@@ -269,21 +269,32 @@ const TraineeProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        <IonItem>
-          <IonLabel position="stacked">Type of Training *</IonLabel>
-          <IonSelect
-            interface="action-sheet"
-            interfaceOptions={{ buttons: [] }}
-            value={formData.course}
-            onIonChange={e => handleChange('course', e.detail.value)}
-          >
-            {trainings.map(training => (
-              <IonSelectOption key={training} value={training}>
-                {training}
-              </IonSelectOption>
-            ))}
-          </IonSelect>
-        </IonItem>
+        <style>
+  {`
+    ion-action-sheet.no-cancel-sheet .action-sheet-cancel {
+      display: none !important;
+    }
+  `}
+</style>
+
+<IonItem>
+  <IonLabel position="stacked">Type of Training *</IonLabel>
+  <IonSelect
+    interface="action-sheet"
+    interfaceOptions={{
+      cssClass: 'no-cancel-sheet' // Importante ni para kini ra nga select ang ma-apektuhan
+    }}
+    
+    value={formData.course}
+    onIonChange={e => handleChange('course', e.detail.value)}
+  >
+    {trainings.map(training => (
+      <IonSelectOption key={training} value={training}>
+        {training}
+      </IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
 
         <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
           Save Trainee
