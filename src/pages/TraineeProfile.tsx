@@ -11,12 +11,18 @@ import {
   IonSelectOption,
   IonButton,
   IonToast,
+  IonButtons,
+  IonIcon
 } from '@ionic/react';
 
-import { useState } from 'react';
+import { arrowBack } from 'ionicons/icons';
+import { useState, useRef, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const TraineeProfile: React.FC = () => {
+
+  const history = useHistory();
 
   const barangays = [
     "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
@@ -32,39 +38,24 @@ const TraineeProfile: React.FC = () => {
   ];
 
   const trainings = [
-    "Barista",
-    "Barangay Health Services NCII",
-    "Bayong Making",
-    "Beauty Care (Nail Care, Hair and Make-up)",
-    "Bookkeeping NC III",
-    "Bread and Pastry Production",
-    "Community Nutrition Services",
-    "Cookery",
-    "Dressmaking NCII",
-    "Driving NCII",
+    "Barista","Barangay Health Services NCII","Bayong Making",
+    "Beauty Care (Nail Care, Hair and Make-up)","Bookkeeping NC III",
+    "Bread and Pastry Production","Community Nutrition Services",
+    "Cookery","Dressmaking NCII","Driving NCII",
     "Electrical Installation and Maintenance NC II",
-    "Emergency Medical Services NCII",
-    "Food Processing",
-    "Garbage Collection NCII",
-    "Housekeeping NC II",
-    "Masonry and Hallow Blocks",
-    "Massage Therapy",
-    "Organic Agriculture NC II",
-    "Pineapple Processing",
-    "Plumbing",
-    "Scaffolding",
-    "Security Services NCII",
+    "Emergency Medical Services NCII","Food Processing",
+    "Garbage Collection NCII","Housekeeping NC II",
+    "Masonry and Hallow Blocks","Massage Therapy",
+    "Organic Agriculture NC II","Pineapple Processing",
+    "Plumbing","Scaffolding","Security Services NCII",
     "Shielded Metal Arc Welding(SMAW) NC I",
     "Shielded Metal Arc Welding(SMAW) NC II"
   ];
 
   const educationalAttainmentOptions = [
-    "Elementary Level",
-    "Elementary Graduate",
-    "High School Level",
-    "High School Graduate",
-    "Senior High School Graduate",
-    "College Level",
+    "Elementary Level","Elementary Graduate",
+    "High School Level","High School Graduate",
+    "Senior High School Graduate","College Level",
     "College Graduate"
   ];
 
@@ -83,7 +74,12 @@ const TraineeProfile: React.FC = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [showToast, setShowToast] = useState(false);
 
+  const firstRef = useRef<HTMLIonInputElement>(null);
+  const middleRef = useRef<HTMLIonInputElement>(null);
+  const buttonRef = useRef<HTMLIonButtonElement>(null);
+
   const handleChange = (field: string, value: any) => {
+
     const uppercaseFields = ['lastname','firstname','middlename','ip_group'];
 
     if (uppercaseFields.includes(field) && value) {
@@ -91,6 +87,13 @@ const TraineeProfile: React.FC = () => {
     }
 
     setFormData({ ...formData, [field]: value });
+  };
+
+  const handleEnterNext = (nextRef: any) => (e: any) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      nextRef?.current?.setFocus();
+    }
   };
 
   const saveTrainee = async () => {
@@ -112,7 +115,6 @@ const TraineeProfile: React.FC = () => {
       return;
     }
 
-    // 🔥 GET TRAINING TYPE ID
     const { data: trainingData, error: trainingError } = await supabase
       .from('training_types')
       .select('id')
@@ -120,7 +122,6 @@ const TraineeProfile: React.FC = () => {
       .single();
 
     if (trainingError || !trainingData) {
-      console.error(trainingError);
       alert("Training type not found in database.");
       return;
     }
@@ -135,12 +136,11 @@ const TraineeProfile: React.FC = () => {
         is_ip: formData.is_ip,
         ip_group: formData.is_ip ? formData.ip_group : null,
         educational_attainment: formData.educational_attainment,
-        training_type_id: trainingData.id   // ✅ foreign key insert
+        training_type_id: trainingData.id
       }
     ]);
 
     if (error) {
-      console.error(error);
       alert(error.message);
       return;
     }
@@ -151,9 +151,19 @@ const TraineeProfile: React.FC = () => {
 
   return (
     <IonPage>
+
       <IonHeader>
         <IonToolbar color="primary">
+
+          {/* DIRECT DASHBOARD BACK BUTTON */}
+          <IonButtons slot="start">
+            <IonButton onClick={() => history.replace('/dashboard')}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>
+          </IonButtons>
+
           <IonTitle>Trainee Profiling Form</IonTitle>
+
         </IonToolbar>
       </IonHeader>
 
@@ -162,22 +172,29 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Last Name *</IonLabel>
           <IonInput
+            placeholder="LASTNAME"
             value={formData.lastname}
             onIonChange={e => handleChange('lastname', e.detail.value)}
+            onKeyDown={handleEnterNext(firstRef)}
           />
         </IonItem>
 
         <IonItem>
           <IonLabel position="stacked">First Name *</IonLabel>
           <IonInput
+            ref={firstRef}
+            placeholder="FIRSTNAME"
             value={formData.firstname}
             onIonChange={e => handleChange('firstname', e.detail.value)}
+            onKeyDown={handleEnterNext(middleRef)}
           />
         </IonItem>
 
         <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
           <IonInput
+            ref={middleRef}
+            placeholder="MIDDLENAME"
             value={formData.middlename}
             onIonChange={e => handleChange('middlename', e.detail.value)}
           />
@@ -186,6 +203,7 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>
           <IonSelect
+            interface="popover"
             value={formData.gender}
             onIonChange={e => handleChange('gender', e.detail.value)}
           >
@@ -197,6 +215,7 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Barangay Address *</IonLabel>
           <IonSelect
+            interface="popover"
             value={formData.barangay}
             onIonChange={e => handleChange('barangay', e.detail.value)}
           >
@@ -209,6 +228,7 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Are you IP?</IonLabel>
           <IonSelect
+            interface="popover"
             value={formData.is_ip}
             onIonChange={e => handleChange('is_ip', e.detail.value)}
           >
@@ -221,6 +241,7 @@ const TraineeProfile: React.FC = () => {
           <IonItem>
             <IonLabel position="stacked">IP Tribe *</IonLabel>
             <IonSelect
+              interface="popover"
               value={formData.ip_group}
               onIonChange={e => handleChange('ip_group', e.detail.value)}
             >
@@ -236,6 +257,7 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Educational Attainment *</IonLabel>
           <IonSelect
+            interface="popover"
             value={formData.educational_attainment}
             onIonChange={e => handleChange('educational_attainment', e.detail.value)}
           >
@@ -250,6 +272,8 @@ const TraineeProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Type of Training *</IonLabel>
           <IonSelect
+            interface="action-sheet"
+            interfaceOptions={{ buttons: [] }}
             value={formData.course}
             onIonChange={e => handleChange('course', e.detail.value)}
           >
@@ -261,7 +285,7 @@ const TraineeProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        <IonButton expand="block" onClick={saveTrainee} className="ion-margin-top">
+        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
           Save Trainee
         </IonButton>
 

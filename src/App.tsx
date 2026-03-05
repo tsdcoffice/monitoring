@@ -35,7 +35,7 @@ setupIonicReact();
 const AppContent: React.FC = () => {
   const location = useLocation();
 
-  const isLoginPage = location.pathname.includes('/monitoring');
+  const isLoginPage = location.pathname.includes('/login');
 
   return (
     <IonSplitPane contentId="main" disabled={isLoginPage}>
@@ -45,10 +45,10 @@ const AppContent: React.FC = () => {
 
         {/* Default redirect */}
         <Route exact path="/">
-          <Redirect to="/monitoring" />
+          <Redirect to="/login" />
         </Route>
 
-        <Route exact path="/monitoring" component={Login} />
+        <Route exact path="/login" component={Login} />
         <Route exact path="/dashboard" component={Dashboard} />
         <Route exact path="/profiling" component={Profiling} />
         <Route exact path="/account" component={UserAccount} />
@@ -70,7 +70,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter basename="/tsdc_monitoring">
+    <IonReactRouter basename="/monitoring">
       <AppContent />
     </IonReactRouter>
   </IonApp>
