@@ -15,12 +15,13 @@ import {
   IonButtons,
   IonBackButton,
   IonButton,
-  IonIcon
+  IonIcon,
+  IonInput
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { arrowBackOutline } from 'ionicons/icons';
+import { arrowBackOutline, search } from 'ionicons/icons';
 
 interface Course {
   name: string;
@@ -59,6 +60,7 @@ const Training: React.FC = () => {
   const history = useHistory();
   const [courseCounts, setCourseCounts] = useState<{ [slug: string]: number }>({});
   const [totalTrainees, setTotalTrainees] = useState(0);
+   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     fetchCounts();
@@ -97,6 +99,19 @@ const Training: React.FC = () => {
     history.push(route);
   };
 
+  const handleSearch = () => {
+  if (!searchText.trim()) return;
+
+  history.push(`/trainees/all?query=${encodeURIComponent(searchText)}`);
+  setSearchText('');
+};
+
+const handleKeyDown = (e: any) => {
+  if (e.key === 'Enter') {
+    handleSearch();
+  }
+};
+
   return (
     <IonPage>
       <IonHeader>
@@ -107,6 +122,27 @@ const Training: React.FC = () => {
             </IonButton>
           </IonButtons>
           <IonTitle>TSDC Skills Training Dashboard</IonTitle>
+
+          <IonButtons slot="end">
+            <IonInput
+              placeholder="Search trainee..."
+              value={searchText}
+              onIonInput={(e) => setSearchText(e.detail.value!)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+              style={{
+                maxWidth: '200px',
+                marginRight: '5px',
+                color: '#fff'
+              }}
+            />
+            <IonButton onClick={handleSearch}>
+              <IonIcon icon={search} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 

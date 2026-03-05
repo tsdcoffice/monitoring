@@ -5,7 +5,7 @@ import {
   IonPopover, IonList, IonItem, IonLabel, IonButtons
 } from '@ionic/react';
 
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useHistory, useLocation } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -50,11 +50,18 @@ const TraineeList: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const history = useHistory();
 
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const urlSearch = queryParams.get('query') || '';
+
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [trainingTypes, setTrainingTypes] = useState<TrainingType[]>([]);
 
-  const [searchText, setSearchText] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchText, setSearchText] = useState(urlSearch);
+  useEffect(() => {
+    setSearchText(urlSearch);
+  }, [urlSearch]);
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
 
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedTrainingType, setSelectedTrainingType] = useState('');
@@ -111,11 +118,13 @@ const TraineeList: React.FC = () => {
         }
       }
 
-      if (debouncedSearch) {
-        query = query.or(
-          `firstname.ilike.%${debouncedSearch}%,lastname.ilike.%${debouncedSearch}%`
-        );
-      }
+        if (debouncedSearch || urlSearch) {
+          const searchValue = debouncedSearch || urlSearch;
+
+          query = query.or(
+            `firstname.ilike.%${searchValue}%,lastname.ilike.%${searchValue}%`
+          );
+        }
 
       if (selectedBarangay) {
         query = query.eq('barangay', selectedBarangay);
@@ -148,6 +157,7 @@ const TraineeList: React.FC = () => {
   }, [
     slug,
     debouncedSearch,
+    urlSearch,
     selectedBarangay,
     selectedTrainingType,
     sortOption
@@ -422,6 +432,4 @@ const generateTableRows = () => {
 
 export default TraineeList;
 
-function generateTableRows() {
-  throw new Error('Function not implemented.');
-}
+
