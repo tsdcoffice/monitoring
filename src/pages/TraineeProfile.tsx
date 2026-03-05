@@ -11,12 +11,18 @@ import {
   IonSelectOption,
   IonButton,
   IonToast,
+  IonButtons,
+  IonIcon
 } from '@ionic/react';
 
+import { arrowBack } from 'ionicons/icons';
 import { useState, useRef, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const TraineeProfile: React.FC = () => {
+
+  const history = useHistory();
 
   const barangays = [
     "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
@@ -68,30 +74,12 @@ const TraineeProfile: React.FC = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [showToast, setShowToast] = useState(false);
 
-  // 🔥 Refs for Enter key navigation
   const firstRef = useRef<HTMLIonInputElement>(null);
   const middleRef = useRef<HTMLIonInputElement>(null);
   const buttonRef = useRef<HTMLIonButtonElement>(null);
 
-  // 🔥 Dynamic interface for Training dropdown
-  const [selectInterface, setSelectInterface] = useState<'popover' | 'action-sheet'>('action-sheet');
-
-  useEffect(() => {
-    if (!buttonRef.current) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setSelectInterface(entry.isIntersecting ? 'popover' : 'action-sheet');
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(buttonRef.current);
-
-    return () => observer.disconnect();
-  }, []);
-
   const handleChange = (field: string, value: any) => {
+
     const uppercaseFields = ['lastname','firstname','middlename','ip_group'];
 
     if (uppercaseFields.includes(field) && value) {
@@ -163,15 +151,24 @@ const TraineeProfile: React.FC = () => {
 
   return (
     <IonPage>
+
       <IonHeader>
         <IonToolbar color="primary">
+
+          {/* DIRECT DASHBOARD BACK BUTTON */}
+          <IonButtons slot="start">
+            <IonButton onClick={() => history.replace('/dashboard')}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>
+          </IonButtons>
+
           <IonTitle>Trainee Profiling Form</IonTitle>
+
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
 
-        {/* LAST NAME */}
         <IonItem>
           <IonLabel position="stacked">Last Name *</IonLabel>
           <IonInput
@@ -182,7 +179,6 @@ const TraineeProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* FIRST NAME */}
         <IonItem>
           <IonLabel position="stacked">First Name *</IonLabel>
           <IonInput
@@ -194,7 +190,6 @@ const TraineeProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* MIDDLE NAME */}
         <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
           <IonInput
@@ -205,7 +200,6 @@ const TraineeProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* GENDER */}
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>
           <IonSelect
@@ -218,7 +212,6 @@ const TraineeProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* BARANGAY */}
         <IonItem>
           <IonLabel position="stacked">Barangay Address *</IonLabel>
           <IonSelect
@@ -232,7 +225,6 @@ const TraineeProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* IP */}
         <IonItem>
           <IonLabel position="stacked">Are you IP?</IonLabel>
           <IonSelect
@@ -262,7 +254,6 @@ const TraineeProfile: React.FC = () => {
           </IonItem>
         )}
 
-        {/* EDUCATION */}
         <IonItem>
           <IonLabel position="stacked">Educational Attainment *</IonLabel>
           <IonSelect
@@ -278,25 +269,21 @@ const TraineeProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* TRAINING */}
-<IonItem>
-  <IonLabel position="stacked">Type of Training *</IonLabel>
-  <IonSelect
-    interface="action-sheet"
-    /* Kani nga part ang mopatay sa Cancel button */
-    interfaceOptions={{
-      buttons: [] 
-    }}
-    value={formData.course}
-    onIonChange={e => handleChange('course', e.detail.value)}
-  >
-    {trainings.map(training => (
-      <IonSelectOption key={training} value={training}>
-        {training}
-      </IonSelectOption>
-    ))}
-  </IonSelect>
-</IonItem>
+        <IonItem>
+          <IonLabel position="stacked">Type of Training *</IonLabel>
+          <IonSelect
+            interface="action-sheet"
+            interfaceOptions={{ buttons: [] }}
+            value={formData.course}
+            onIonChange={e => handleChange('course', e.detail.value)}
+          >
+            {trainings.map(training => (
+              <IonSelectOption key={training} value={training}>
+                {training}
+              </IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
 
         <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
           Save Trainee

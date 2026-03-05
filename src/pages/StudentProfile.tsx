@@ -11,9 +11,13 @@ import {
   IonSelectOption,
   IonButton,
   IonToast,
+  IonButtons,
+  IonIcon
 } from '@ionic/react';
 
+import { arrowBack } from 'ionicons/icons';
 import { useEffect, useState, useRef } from 'react';
+import { useHistory } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 interface ScholarshipType {
@@ -22,23 +26,25 @@ interface ScholarshipType {
 }
 
 const StudentProfile: React.FC = () => {
-  // 🔥 1. Siguroa nga ang type kay HTMLIonInputElement ug naay null sa sugod
+
+  const history = useHistory();
+
   const firstNameRef = useRef<HTMLIonInputElement>(null);
   const middleNameRef = useRef<HTMLIonInputElement>(null);
   const schoolRef = useRef<HTMLIonInputElement>(null);
   const courseRef = useRef<HTMLIonInputElement>(null);
 
   const barangays = [
-    "Agusan Canyon", "Alae", "Dahilayan", "Dalirig", "Damilag", "Diclum",
-    "Guilang-guilang", "Kalugmanan", "Lindaban", "Lingion", "Lunocan",
-    "Maluko", "Mambatangan", "Mampayag", "Mantibugao", "Minsuro",
-    "San Miguel", "Sankanan", "Santiago", "Santo Niño",
-    "Tankulan (Pob.)", "Ticala"
+    "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
+    "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
+    "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
+    "San Miguel","Sankanan","Santiago","Santo Niño",
+    "Tankulan (Pob.)","Ticala"
   ];
 
   const ipTribes = [
-    "BUKIDNON", "HIGAONON", "MANOBO", "MATIGSALUG",
-    "TALAANDIG", "TIGWAHANON", "UMAYAMNON"
+    "BUKIDNON","HIGAONON","MANOBO","MATIGSALUG",
+    "TALAANDIG","TIGWAHANON","UMAYAMNON"
   ];
 
   const initialFormState = {
@@ -75,23 +81,24 @@ const StudentProfile: React.FC = () => {
   };
 
   const handleChange = (field: string, value: any) => {
-    const uppercaseFields = ['lastname', 'firstname', 'middlename', 'school', 'course', 'ip_group'];
+    const uppercaseFields = ['lastname','firstname','middlename','school','course','ip_group'];
+
     if (uppercaseFields.includes(field) && value) {
       value = value.toUpperCase();
     }
+
     setFormData({ ...formData, [field]: value });
   };
 
-  // 🔥 2. NAVIGATION FUNCTION: Gi-fix ang typing para dili mag-error sa "null"
   const handleEnter = (nextRef: React.RefObject<HTMLIonInputElement | null>) => (e: any) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Gamiti og optional chaining (?) aron safe bisag null pa ang ref
       nextRef.current?.setFocus();
     }
   };
 
   const saveStudent = async () => {
+
     if (
       !formData.lastname ||
       !formData.firstname ||
@@ -124,26 +131,34 @@ const StudentProfile: React.FC = () => {
 
   return (
     <IonPage>
+
       <IonHeader>
         <IonToolbar color="primary">
+
+          {/* BACK BUTTON DIRECT TO DASHBOARD */}
+          <IonButtons slot="start">
+            <IonButton onClick={() => history.push('/dashboard')}>
+              <IonIcon icon={arrowBack} />
+            </IonButton>
+          </IonButtons>
+
           <IonTitle>Student Profiling</IonTitle>
+
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
-        {/* LASTNAME */}
+
         <IonItem>
           <IonLabel position="stacked">Last Name *</IonLabel>
           <IonInput
             placeholder="LASTNAME"
             value={formData.lastname}
             onIonChange={e => handleChange('lastname', e.detail.value)}
-            // Pass the ref to the next field
             onKeyDown={handleEnter(firstNameRef)}
           />
         </IonItem>
 
-        {/* FIRSTNAME */}
         <IonItem>
           <IonLabel position="stacked">First Name *</IonLabel>
           <IonInput
@@ -155,7 +170,6 @@ const StudentProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* MIDDLENAME */}
         <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
           <IonInput
@@ -167,7 +181,6 @@ const StudentProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* GENDER & BARANGAY - Skipped in Enter navigation because Select is tricky */}
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>
           <IonSelect
@@ -193,7 +206,6 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* SCHOOL */}
         <IonItem>
           <IonLabel position="stacked">School Name *</IonLabel>
           <IonInput
@@ -205,7 +217,6 @@ const StudentProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* COURSE */}
         <IonItem>
           <IonLabel position="stacked">Course *</IonLabel>
           <IonInput
@@ -216,7 +227,6 @@ const StudentProfile: React.FC = () => {
           />
         </IonItem>
 
-        {/* YEAR LEVEL, IP, SCHOLARSHIP - Standard Inputs */}
         <IonItem>
           <IonLabel position="stacked">Year Level *</IonLabel>
           <IonSelect
@@ -282,6 +292,7 @@ const StudentProfile: React.FC = () => {
           duration={1500}
           onDidDismiss={() => setShowToast(false)}
         />
+
       </IonContent>
     </IonPage>
   );
