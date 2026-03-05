@@ -12,11 +12,10 @@ import {
   IonIcon
 } from "@ionic/react";
 import { eyeOutline, eyeOffOutline } from "ionicons/icons";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-// ✅ Make sure this path matches your logo location
 import tesdaLogo from "../pics/tesda-logo.jfif";
 
 const Login: React.FC = () => {
@@ -25,8 +24,11 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const passwordRef = useRef<HTMLIonInputElement>(null);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,6 +37,7 @@ const Login: React.FC = () => {
     }
 
     setErrorMessage("");
+    setSuccessMessage("");
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -51,11 +54,35 @@ const Login: React.FC = () => {
     }
   };
 
+const handleForgotPassword = async () => {
+  if (!email) {
+    setErrorMessage("Please enter your email first.");
+    return;
+  }
+
+  setErrorMessage("");
+  setSuccessMessage("");
+  setLoading(true);
+
+  const redirectTo =
+    "https://tsdcoffice.github.io/monitoring/#/reset-password";
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  setLoading(false);
+
+  if (error) {
+    setErrorMessage(error.message);
+  } else {
+    setSuccessMessage("Password reset email sent. Check your inbox.");
+  }
+};
+
   return (
     <IonPage>
       <IonContent fullscreen>
-
-        {/* CENTER WRAPPER */}
         <div
           style={{
             display: "flex",
@@ -77,7 +104,6 @@ const Login: React.FC = () => {
           >
             <IonCardContent>
 
-              {/* LOGO */}
               <div style={{ textAlign: "center", marginBottom: "20px" }}>
                 <img
                   src={tesdaLogo}
@@ -86,7 +112,6 @@ const Login: React.FC = () => {
                 />
               </div>
 
-              {/* TITLE */}
               <h1
                 style={{
                   textAlign: "center",
@@ -110,27 +135,38 @@ const Login: React.FC = () => {
 
               {/* EMAIL FIELD */}
               <IonItem style={{ marginBottom: "20px" }}>
-                {!email && (
-                  <IonLabel position="floating"></IonLabel>
-                )}
+                {!email && <IonLabel position="floating"></IonLabel>}
                 <IonInput
                   type="email"
                   value={email}
                   placeholder="Enter your email"
-                  onIonChange={(e) => setEmail(e.detail.value!)}
+                  onIonInput={(e) =>
+                    setEmail((e.target as unknown as HTMLInputElement).value)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      passwordRef.current?.setFocus();
+                    }
+                  }}
                 />
               </IonItem>
 
               {/* PASSWORD FIELD */}
-              <IonItem style={{ marginBottom: "25px" }}>
-                {!password && (
-                  <IonLabel position="floating"></IonLabel>
-                )}
+              <IonItem style={{ marginBottom: "10px" }}>
+                {!password && <IonLabel position="floating"></IonLabel>}
                 <IonInput
+                  ref={passwordRef}
                   type={showPassword ? "text" : "password"}
                   value={password}
                   placeholder="Enter your password"
-                  onIonChange={(e) => setPassword(e.detail.value!)}
+                  onIonInput={(e) =>
+                    setPassword((e.target as unknown as HTMLInputElement).value)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleLogin();
+                    }
+                  }}
                 />
                 <IonIcon
                   icon={showPassword ? eyeOffOutline : eyeOutline}
@@ -140,7 +176,16 @@ const Login: React.FC = () => {
                 />
               </IonItem>
 
-              {/* LOGIN BUTTON */}
+              <div style={{ textAlign: "right", marginBottom: "20px" }}>
+                <IonText
+                  color="primary"
+                  style={{ cursor: "pointer", fontSize: "14px" }}
+                  onClick={handleForgotPassword}
+                >
+                  Forgot Password?
+                </IonText>
+              </div>
+
               <IonButton
                 expand="block"
                 onClick={handleLogin}
@@ -153,7 +198,6 @@ const Login: React.FC = () => {
                 {loading ? <IonSpinner name="crescent" /> : "Login"}
               </IonButton>
 
-              {/* ERROR MESSAGE */}
               {errorMessage && (
                 <IonText color="danger">
                   <p style={{ textAlign: "center", marginTop: "15px" }}>
@@ -162,11 +206,18 @@ const Login: React.FC = () => {
                 </IonText>
               )}
 
+              {successMessage && (
+                <IonText color="success">
+                  <p style={{ textAlign: "center", marginTop: "15px" }}>
+                    {successMessage}
+                  </p>
+                </IonText>
+              )}
+
             </IonCardContent>
           </IonCard>
         </div>
 
-        {/* FADE-IN ANIMATION */}
         <style>
           {`
             @keyframes fadeIn {

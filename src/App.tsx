@@ -28,6 +28,7 @@ import StudentProfile from './pages/StudentProfile';
 import Training from './pages/Training';
 import TraineeList from './pages/TraineeList';
 import TraineeProfile from './pages/TraineeProfile';
+import ResetPassword from './pages/ResetPassword';
 
 setupIonicReact();
 
@@ -56,6 +57,7 @@ const AppContent: React.FC = () => {
         <Route exact path="/training" component={Training}/>
         <Route exact path="/trainees/:slug" component={TraineeList}/>
         <Route exact path="/student-profile" component={StudentProfile} />
+        <Route exact path="/reset-password" component={ResetPassword} />
 
         {/* Profiling children */}
         <Route exact path="/profiling/scholarship" component={StudentProfile} />
