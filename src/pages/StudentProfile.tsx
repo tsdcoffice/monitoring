@@ -13,7 +13,7 @@ import {
   IonToast,
 } from '@ionic/react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 interface ScholarshipType {
@@ -22,23 +22,23 @@ interface ScholarshipType {
 }
 
 const StudentProfile: React.FC = () => {
+  // 🔥 1. Siguroa nga ang type kay HTMLIonInputElement ug naay null sa sugod
+  const firstNameRef = useRef<HTMLIonInputElement>(null);
+  const middleNameRef = useRef<HTMLIonInputElement>(null);
+  const schoolRef = useRef<HTMLIonInputElement>(null);
+  const courseRef = useRef<HTMLIonInputElement>(null);
 
   const barangays = [
-    "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
-    "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
-    "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
-    "San Miguel","Sankanan","Santiago","Santo Niño",
-    "Tankulan (Pob.)","Ticala"
+    "Agusan Canyon", "Alae", "Dahilayan", "Dalirig", "Damilag", "Diclum",
+    "Guilang-guilang", "Kalugmanan", "Lindaban", "Lingion", "Lunocan",
+    "Maluko", "Mambatangan", "Mampayag", "Mantibugao", "Minsuro",
+    "San Miguel", "Sankanan", "Santiago", "Santo Niño",
+    "Tankulan (Pob.)", "Ticala"
   ];
 
   const ipTribes = [
-    "BUKIDNON",
-    "HIGAONON",
-    "MANOBO",
-    "MATIGSALUG",
-    "TALAANDIG",
-    "TIGWAHANON",
-    "UMAYAMNON"
+    "BUKIDNON", "HIGAONON", "MANOBO", "MATIGSALUG",
+    "TALAANDIG", "TIGWAHANON", "UMAYAMNON"
   ];
 
   const initialFormState = {
@@ -75,26 +75,23 @@ const StudentProfile: React.FC = () => {
   };
 
   const handleChange = (field: string, value: any) => {
-
-    // Fields nga gusto nato i ALL CAPS
-    const uppercaseFields = [
-      'lastname',
-      'firstname',
-      'middlename',
-      'school',
-      'course',
-      'ip_group'
-    ];
-
+    const uppercaseFields = ['lastname', 'firstname', 'middlename', 'school', 'course', 'ip_group'];
     if (uppercaseFields.includes(field) && value) {
       value = value.toUpperCase();
     }
-
     setFormData({ ...formData, [field]: value });
   };
 
-  const saveStudent = async () => {
+  // 🔥 2. NAVIGATION FUNCTION: Gi-fix ang typing para dili mag-error sa "null"
+  const handleEnter = (nextRef: React.RefObject<HTMLIonInputElement | null>) => (e: any) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Gamiti og optional chaining (?) aron safe bisag null pa ang ref
+      nextRef.current?.setFocus();
+    }
+  };
 
+  const saveStudent = async () => {
     if (
       !formData.lastname ||
       !formData.firstname ||
@@ -113,9 +110,7 @@ const StudentProfile: React.FC = () => {
       return;
     }
 
-    const { error } = await supabase.from('students').insert([
-      formData
-    ]);
+    const { error } = await supabase.from('students').insert([formData]);
 
     if (error) {
       console.error(error);
@@ -124,8 +119,6 @@ const StudentProfile: React.FC = () => {
     }
 
     setShowToast(true);
-
-    // RESET FORM
     setFormData(initialFormState);
   };
 
@@ -138,7 +131,6 @@ const StudentProfile: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-
         {/* LASTNAME */}
         <IonItem>
           <IonLabel position="stacked">Last Name *</IonLabel>
@@ -146,6 +138,8 @@ const StudentProfile: React.FC = () => {
             placeholder="LASTNAME"
             value={formData.lastname}
             onIonChange={e => handleChange('lastname', e.detail.value)}
+            // Pass the ref to the next field
+            onKeyDown={handleEnter(firstNameRef)}
           />
         </IonItem>
 
@@ -153,9 +147,11 @@ const StudentProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">First Name *</IonLabel>
           <IonInput
+            ref={firstNameRef}
             placeholder="FIRSTNAME"
             value={formData.firstname}
             onIonChange={e => handleChange('firstname', e.detail.value)}
+            onKeyDown={handleEnter(middleNameRef)}
           />
         </IonItem>
 
@@ -163,13 +159,15 @@ const StudentProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
           <IonInput
+            ref={middleNameRef}
             placeholder="MIDDLENAME"
             value={formData.middlename}
             onIonChange={e => handleChange('middlename', e.detail.value)}
+            onKeyDown={handleEnter(schoolRef)}
           />
         </IonItem>
 
-        {/* GENDER */}
+        {/* GENDER & BARANGAY - Skipped in Enter navigation because Select is tricky */}
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>
           <IonSelect
@@ -182,7 +180,6 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* BARANGAY */}
         <IonItem>
           <IonLabel position="stacked">Barangay Address *</IonLabel>
           <IonSelect
@@ -200,9 +197,11 @@ const StudentProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">School Name *</IonLabel>
           <IonInput
+            ref={schoolRef}
             placeholder="DON'T ABBREVIATE"
             value={formData.school}
             onIonChange={e => handleChange('school', e.detail.value)}
+            onKeyDown={handleEnter(courseRef)}
           />
         </IonItem>
 
@@ -210,13 +209,14 @@ const StudentProfile: React.FC = () => {
         <IonItem>
           <IonLabel position="stacked">Course *</IonLabel>
           <IonInput
+            ref={courseRef}
             placeholder="DON'T ABBREVIATE"
             value={formData.course}
             onIonChange={e => handleChange('course', e.detail.value)}
           />
         </IonItem>
 
-        {/* YEAR LEVEL */}
+        {/* YEAR LEVEL, IP, SCHOLARSHIP - Standard Inputs */}
         <IonItem>
           <IonLabel position="stacked">Year Level *</IonLabel>
           <IonSelect
@@ -232,7 +232,6 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* IP YES/NO */}
         <IonItem>
           <IonLabel position="stacked">Are you IP?</IonLabel>
           <IonSelect
@@ -245,7 +244,6 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        {/* IP TRIBE */}
         {formData.is_ip && (
           <IonItem>
             <IonLabel position="stacked">IP Tribe *</IonLabel>
@@ -255,15 +253,12 @@ const StudentProfile: React.FC = () => {
               onIonChange={e => handleChange('ip_group', e.detail.value)}
             >
               {ipTribes.map(tribe => (
-                <IonSelectOption key={tribe} value={tribe}>
-                  {tribe}
-                </IonSelectOption>
+                <IonSelectOption key={tribe} value={tribe}>{tribe}</IonSelectOption>
               ))}
             </IonSelect>
           </IonItem>
         )}
 
-        {/* SCHOLARSHIP TYPE */}
         <IonItem>
           <IonLabel position="stacked">Type of Scholarship *</IonLabel>
           <IonSelect
@@ -272,9 +267,7 @@ const StudentProfile: React.FC = () => {
             onIonChange={e => handleChange('scholarship_type_id', e.detail.value)}
           >
             {scholarshipTypes.map(type => (
-              <IonSelectOption key={type.id} value={type.id}>
-                {type.name}
-              </IonSelectOption>
+              <IonSelectOption key={type.id} value={type.id}>{type.name}</IonSelectOption>
             ))}
           </IonSelect>
         </IonItem>
@@ -289,7 +282,6 @@ const StudentProfile: React.FC = () => {
           duration={1500}
           onDidDismiss={() => setShowToast(false)}
         />
-
       </IonContent>
     </IonPage>
   );
