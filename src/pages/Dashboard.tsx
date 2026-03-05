@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   IonButtons, IonContent, IonHeader, IonMenuButton, IonPage,
   IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle,
-  IonCardContent, IonProgressBar, IonText, IonGrid, IonRow, IonCol
+  IonCardContent, IonProgressBar, IonText, IonGrid, IonRow, IonCol,
+  useIonViewWillEnter
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -39,9 +40,10 @@ const Dashboard: React.FC = () => {
   const [genderStats, setGenderStats] = useState({ male: 0, female: 0 });
   const [barangayCounts, setBarangayCounts] = useState<number[]>([]);
 
-  useEffect(() => {
+  // 🔥 Refresh data every time the Dashboard is about to enter view
+  useIonViewWillEnter(() => {
     fetchDashboardData();
-  }, []);
+  });
 
   const fetchDashboardData = async () => {
 
@@ -59,9 +61,8 @@ const Dashboard: React.FC = () => {
     setTotalTrainees(traineeCount || 0);
 
     /* ==============================
-       FIXED: GENDER COUNT (COMBINED)
+       GENDER COUNT (COMBINED)
     ============================== */
-
     const { data: studentGender } = await supabase
       .from('students')
       .select('gender');
@@ -81,9 +82,8 @@ const Dashboard: React.FC = () => {
     setGenderStats({ male, female });
 
     /* ==============================
-       BARANGAY COUNT (UNCHANGED)
+       BARANGAY COUNT
     ============================== */
-
     const counts = new Array(barangays.length).fill(0);
 
     const { data: studentBarangay } = await supabase
@@ -152,7 +152,6 @@ const Dashboard: React.FC = () => {
 
         <IonGrid>
           <IonRow>
-
             <IonCol size="12" sizeMd="6">
               <IonCard button onClick={() => history.push('/scholarship')}
                 style={{ background: 'linear-gradient(135deg, #3880ff 0%, #6096ff 100%)', borderRadius: '15px' }}>
@@ -180,7 +179,6 @@ const Dashboard: React.FC = () => {
                 </IonCardContent>
               </IonCard>
             </IonCol>
-
           </IonRow>
         </IonGrid>
 
