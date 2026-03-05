@@ -64,11 +64,12 @@ const StudentList: React.FC = () => {
   const history = useHistory();
   const queryParams = new URLSearchParams(location.search);
   const typeQuery = queryParams.get('type');
+  const searchQuery = queryParams.get('query');
 
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
 
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState(searchQuery || '');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
   const [sortOption, setSortOption] = useState('az');
@@ -76,7 +77,7 @@ const StudentList: React.FC = () => {
 
   useEffect(() => {
     fetchStudents();
-  }, [typeQuery]);
+  }, [typeQuery, searchQuery]);
 
   useEffect(() => {
     applyFilters();
@@ -99,6 +100,11 @@ const StudentList: React.FC = () => {
         query = query.eq('scholarship_type_id', typeData.id);
       }
     }
+     if (searchQuery) {
+    query = query.or(
+      `lastname.ilike.%${searchQuery}%,firstname.ilike.%${searchQuery}%`
+    );
+  }
 
     const { data } = await query;
     setStudents(data || []);
