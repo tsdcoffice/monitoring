@@ -258,7 +258,6 @@ const StudentList: React.FC = () => {
 
       <IonContent className="ion-padding">
 
-        {/* ACTION BAR */}
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:'15px'}}>
 
           <div>
@@ -284,6 +283,7 @@ const StudentList: React.FC = () => {
             </IonButton>
 
             <IonSelect
+              interface="popover"
               value={sortOption}
               onIonChange={e => setSortOption(e.detail.value)}
             >
@@ -296,12 +296,13 @@ const StudentList: React.FC = () => {
           </div>
         </div>
 
-        {/* FILTER */}
         <IonPopover isOpen={showFilter} onDidDismiss={() => setShowFilter(false)}>
           <IonList style={{padding:'15px',minWidth:'250px'}}>
+
             <IonItem>
               <IonLabel position="stacked">Barangay</IonLabel>
               <IonSelect
+                interface="popover"
                 value={selectedBarangay}
                 onIonChange={e => setSelectedBarangay(e.detail.value)}
               >
@@ -314,6 +315,7 @@ const StudentList: React.FC = () => {
             <IonItem>
               <IonLabel position="stacked">Gender</IonLabel>
               <IonSelect
+                interface="popover"
                 value={selectedGender}
                 onIonChange={e => setSelectedGender(e.detail.value)}
               >
@@ -322,9 +324,16 @@ const StudentList: React.FC = () => {
               </IonSelect>
             </IonItem>
 
-            <IonButton expand="block" color="medium" onClick={resetFilters}>
-              Reset
-            </IonButton>
+            <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
+              <IonButton expand="block" color="medium" onClick={resetFilters}>
+                Reset
+              </IonButton>
+
+              <IonButton expand="block" onClick={() => setShowFilter(false)}>
+                OK
+              </IonButton>
+            </div>
+
           </IonList>
         </IonPopover>
 
@@ -356,6 +365,7 @@ const StudentList: React.FC = () => {
               <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
             </IonRow>
           ))}
+
         </IonGrid>
 
       </IonContent>

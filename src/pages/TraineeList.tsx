@@ -10,7 +10,6 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import {
   printOutline,
@@ -18,6 +17,7 @@ import {
   funnelOutline,
   arrowBackOutline,
 } from 'ionicons/icons';
+import autoTable from 'jspdf-autotable';
 
 interface Trainee {
   id: string;
@@ -98,7 +98,6 @@ const TraineeList: React.FC = () => {
 
       let query = supabase.from('trainees').select('*');
 
-      // slug filter (from route)
       if (slug && slug !== 'all') {
         const formatted = slug.replace(/-/g, ' ');
         const { data: typeData } = await supabase
@@ -112,24 +111,20 @@ const TraineeList: React.FC = () => {
         }
       }
 
-      // search
       if (debouncedSearch) {
         query = query.or(
           `firstname.ilike.%${debouncedSearch}%,lastname.ilike.%${debouncedSearch}%`
         );
       }
 
-      // barangay filter
       if (selectedBarangay) {
         query = query.eq('barangay', selectedBarangay);
       }
 
-      // training type filter
       if (selectedTrainingType) {
         query = query.eq('training_type_id', selectedTrainingType);
       }
 
-      // sort
       switch (sortOption) {
         case 'az':
           query = query.order('lastname', { ascending: true });
@@ -163,45 +158,105 @@ const TraineeList: React.FC = () => {
     setSelectedTrainingType('');
     setSearchText('');
     setSortOption('date_desc');
-    setShowFilter(false);
   };
 
-  /* =========================
-     PRINT
-  ========================== */
-  const handlePrint = () => {
-    if (!tableRef.current) return;
-    const printContents = tableRef.current.innerHTML;
-    const originalContents = document.body.innerHTML;
-    document.body.innerHTML = printContents;
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
-  };
+  /* PRINT */
+const handlePrint = () => {
+  if (!tableRef.current) return;
 
-  /* =========================
-     PDF DOWNLOAD
-  ========================== */
-  const handleDownloadPDF = async () => {
-    if (!tableRef.current) return;
+  const printWindow = window.open('', '', 'width=900,height=700');
+  if (!printWindow) return;
 
-    const canvas = await html2canvas(tableRef.current, {
-      scale: 2,
-      backgroundColor: '#fff'
-    });
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>TSDC Trainee List</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h2 { text-align: center; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
+          th { background: #f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <h2>TSDC Trainee List</h2>
+        <table>
+          ${generateTableRows()}
+        </table>
+      </body>
+    </html>
+  `);
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 10;
-    const pdfWidth = pageWidth - margin * 2;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+  /* PDF DOWNLOAD */
+const handleDownloadPDF = () => {
+  const pdf = new jsPDF('p', 'mm', 'a4');
 
-    pdf.text('TSDC Trainee List', pageWidth / 2, 15, { align: 'center' });
-    pdf.addImage(imgData, 'PNG', margin, 25, pdfWidth, pdfHeight);
-    pdf.save('tsdc_trainee_list.pdf');
-  };
+  pdf.setFontSize(14);
+  pdf.text('TSDC Trainee List', 105, 15, { align: 'center' });
+
+  const tableColumn = [
+    "Barangay",
+    "Name",
+    "Gender",
+    "Education",
+    "IP",
+    "Date",
+    "Training Type"
+  ];
+
+  const tableRows = trainees.map(t => [
+    t.barangay,
+    `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
+    t.gender,
+    t.educational_attainment,
+    t.is_ip ? 'IP' : 'Not IP',
+    new Date(t.created_at).toLocaleDateString(),
+    trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''
+  ]);
+
+  autoTable(pdf, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: 20,
+    styles: { fontSize: 8 }
+  });
+
+  pdf.save('tsdc_trainee_list.pdf');
+};
+
+const generateTableRows = () => {
+  const header = `
+    <tr>
+      <th>Barangay</th>
+      <th>Name</th>
+      <th>Gender</th>
+      <th>Education</th>
+      <th>IP</th>
+      <th>Date</th>
+      <th>Training Type</th>
+    </tr>
+  `;
+
+  const rows = trainees.map(t => `
+    <tr>
+      <td>${t.barangay}</td>
+      <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
+      <td>${t.gender}</td>
+      <td>${t.educational_attainment}</td>
+      <td>${t.is_ip ? 'IP' : 'Not IP'}</td>
+      <td>${new Date(t.created_at).toLocaleDateString()}</td>
+      <td>${trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}</td>
+    </tr>
+  `).join('');
+
+  return header + rows;
+};
 
   return (
     <IonPage>
@@ -209,7 +264,13 @@ const TraineeList: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonButtons slot="start">
-            <IonButton fill="clear" onClick={() => history.push('/training')}>
+              <IonButton
+                fill="clear"
+                onClick={() => {
+                resetFilters();
+                history.push('/training');
+                }}
+              >
               <IonIcon icon={arrowBackOutline} />
             </IonButton>
           </IonButtons>
@@ -223,7 +284,6 @@ const TraineeList: React.FC = () => {
 
       <IonContent className="ion-padding">
 
-        {/* TOP BAR */}
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:'15px'}}>
           <div style={{display:'flex',gap:'8px'}}>
             <IonButton fill="clear" onClick={handlePrint}>
@@ -252,8 +312,12 @@ const TraineeList: React.FC = () => {
               <IonIcon icon={funnelOutline}/> Filter
             </IonButton>
 
-            <IonSelect value={sortOption}
-              onIonChange={e => setSortOption(e.detail.value)}>
+            {/* SORT - NO CANCEL/OK */}
+            <IonSelect
+              interface="popover"
+              value={sortOption}
+              onIonChange={e => setSortOption(e.detail.value)}
+            >
               <IonSelectOption value="az">A-Z</IonSelectOption>
               <IonSelectOption value="za">Z-A</IonSelectOption>
               <IonSelectOption value="date_desc">Newest</IonSelectOption>
@@ -264,13 +328,16 @@ const TraineeList: React.FC = () => {
         </div>
 
         {/* FILTER POPOVER */}
-        <IonPopover isOpen={showFilter}
-          onDidDismiss={() => setShowFilter(false)}>
+        <IonPopover
+          isOpen={showFilter}
+          onDidDismiss={() => setShowFilter(false)}
+        >
           <IonList style={{ padding: 15, minWidth: 250 }}>
 
             <IonItem>
               <IonLabel position="stacked">Barangay</IonLabel>
               <IonSelect
+                interface="popover"
                 value={selectedBarangay}
                 onIonChange={e => setSelectedBarangay(e.detail.value)}
               >
@@ -283,6 +350,7 @@ const TraineeList: React.FC = () => {
             <IonItem>
               <IonLabel position="stacked">Training Type</IonLabel>
               <IonSelect
+                interface="popover"
                 value={selectedTrainingType}
                 onIonChange={e => setSelectedTrainingType(e.detail.value)}
               >
@@ -294,10 +362,15 @@ const TraineeList: React.FC = () => {
               </IonSelect>
             </IonItem>
 
-            <IonButton expand="block" color="medium"
-              onClick={resetFilters}>
-              Reset
-            </IonButton>
+            {/* RESET + OK BUTTON */}
+            <div style={{display:'flex',gap:'8px',marginTop:'10px'}}>
+              <IonButton expand="block" color="medium" onClick={resetFilters}>
+                Reset
+              </IonButton>
+              <IonButton expand="block" onClick={() => setShowFilter(false)}>
+                OK
+              </IonButton>
+            </div>
 
           </IonList>
         </IonPopover>
@@ -313,25 +386,29 @@ const TraineeList: React.FC = () => {
               borderBottom:'2px solid #333',
               background:'#f2f2f2'
             }}>
-              <IonCol>Name</IonCol>
               <IonCol>Barangay</IonCol>
+              <IonCol>Name</IonCol>
               <IonCol>Gender</IonCol>
               <IonCol>Education</IonCol>
               <IonCol>IP</IonCol>
               <IonCol>Date</IonCol>
+              <IonCol>Training Type</IonCol>
             </IonRow>
 
             {trainees.map(t => (
               <IonRow key={t.id}>
+                <IonCol>{t.barangay}</IonCol>
                 <IonCol>
                   {t.lastname}, {t.firstname} {t.middlename || ''}
                 </IonCol>
-                <IonCol>{t.barangay}</IonCol>
                 <IonCol>{t.gender}</IonCol>
                 <IonCol>{t.educational_attainment}</IonCol>
                 <IonCol>{t.is_ip ? 'IP' : 'Not IP'}</IonCol>
                 <IonCol>
                   {new Date(t.created_at).toLocaleDateString()}
+                </IonCol>
+                <IonCol>
+                  {trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
                 </IonCol>
               </IonRow>
             ))}
@@ -344,3 +421,7 @@ const TraineeList: React.FC = () => {
 };
 
 export default TraineeList;
+
+function generateTableRows() {
+  throw new Error('Function not implemented.');
+}

@@ -13,11 +13,14 @@ import {
   IonCardContent,
   IonText,
   IonButtons,
-  IonBackButton
+  IonBackButton,
+  IonButton,
+  IonIcon
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { arrowBackOutline } from 'ionicons/icons';
 
 interface Course {
   name: string;
@@ -99,7 +102,9 @@ const Training: React.FC = () => {
       <IonHeader>
         <IonToolbar color="primary">
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/dashboard" />
+            <IonButton routerLink="/dashboard" routerDirection="root">
+            <IonIcon icon={arrowBackOutline} slot="icon-only" />
+            </IonButton>
           </IonButtons>
           <IonTitle>TSDC Skills Training Dashboard</IonTitle>
         </IonToolbar>
