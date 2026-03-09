@@ -19,107 +19,83 @@ import { supabase } from '../supabaseClient';
 import { useHistory } from 'react-router-dom';
 
 const UserAccount: React.FC = () => {
+  const history = useHistory();
+
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
+
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const history = useHistory();
 
   useEffect(() => {
-    const fetchSessionAndData = async () => {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getSession();
 
-      if (sessionError || !session || !session.session) {
-        setAlertMessage('You must be logged in to access this page.');
-        setShowAlert(true);
-        history.push('/login');
+      if (!data.session) {
+        history.replace('/login');
         return;
       }
 
-      const { data: user, error: userError } = await supabase
+      const userEmail = data.session.user.email || '';
+
+      setEmail(userEmail);
+
+      const { data: user } = await supabase
         .from('users')
-        .select('user_firstname, user_lastname, user_email, username')
-        .eq('user_email', session.session.user.email)
+        .select('user_firstname, user_lastname, username')
+        .eq('user_email', userEmail)
         .maybeSingle();
 
-      if (userError) {
-        setAlertMessage(userError.message);
-        setShowAlert(true);
-        return;
+      if (user) {
+        setFirstName(user.user_firstname || '');
+        setLastName(user.user_lastname || '');
+        setUsername(user.username || '');
       }
-
-      if (!user) {
-        // create user record automatically if missing
-        const { error: insertError } = await supabase
-          .from('users')
-          .upsert({
-            user_email: session.session.user.email,
-            user_firstname: '',
-            user_lastname: '',
-            username: ''
-          },
-          { onConflict: 'user_email' }
-        );
-
-        if (insertError) {
-          setAlertMessage(insertError.message);
-          setShowAlert(true);
-          return;
-        }
-
-        setEmail(session.session.user.email || '');
-        return;
-      }
-
-      setFirstName(user.user_firstname || '');
-      setLastName(user.user_lastname || '');
-      setEmail(user.user_email);
-      setUsername(user.username || '');
     };
 
-    fetchSessionAndData();
+    fetchUser();
   }, [history]);
 
   const handleUpdate = async () => {
-    if (password !== confirmPassword) {
+
+    if (password && password !== confirmPassword) {
       setAlertMessage("Passwords don't match.");
       setShowAlert(true);
       return;
     }
 
-    const { data: session, error: sessionError } = await supabase.auth.getSession();
+    const { data } = await supabase.auth.getSession();
 
-    if (sessionError || !session || !session.session) {
-      setAlertMessage('Error fetching session or no session available.');
-      setShowAlert(true);
+    if (!data.session) {
+      history.replace('/login');
       return;
     }
 
-    const user = session.session.user;
-    if (!user.email) {
-      setAlertMessage('Error: User email is missing.');
-      setShowAlert(true);
-      return;
+    const userEmail = data.session.user.email;
+
+    if (!userEmail) return;
+
+    // verify current password if user wants to change password
+    if (password) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: currentPassword,
+      });
+
+      if (error) {
+        setAlertMessage("Incorrect current password.");
+        setShowAlert(true);
+        return;
+      }
     }
 
-    // Verify current password
-    const { error: passwordError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-
-    if (passwordError) {
-      setAlertMessage('Incorrect current password.');
-      setShowAlert(true);
-      return;
-    }
-
-    // Update user info
+    // update profile info
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -127,7 +103,7 @@ const UserAccount: React.FC = () => {
         user_lastname: lastName,
         username: username,
       })
-      .eq('user_email', user.email);
+      .eq('user_email', userEmail);
 
     if (updateError) {
       setAlertMessage(updateError.message);
@@ -135,92 +111,107 @@ const UserAccount: React.FC = () => {
       return;
     }
 
-    // Update password if provided
+    // update password if provided
     if (password) {
-      const { error: passwordUpdateError } = await supabase.auth.updateUser({
+      const { error: passwordError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (passwordUpdateError) {
-        setAlertMessage(passwordUpdateError.message);
+      if (passwordError) {
+        setAlertMessage(passwordError.message);
         setShowAlert(true);
         return;
       }
+
+      // logout and redirect
+      setAlertMessage("Password updated. Please login again.");
+      setShowAlert(true);
+
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        history.replace('/login');
+      }, 1200);
+
+      return;
     }
 
-    setAlertMessage('Account updated successfully!');
+    // only name updated
+    setAlertMessage("Account updated successfully.");
     setShowAlert(true);
-    history.push('/app'); // Redirect to app dashboard
   };
 
   return (
     <IonPage>
+
       <IonHeader>
         <IonButtons slot="start">
-          <IonBackButton defaultHref="/app" />
+          <IonBackButton defaultHref="/dashboard" />
         </IonButtons>
       </IonHeader>
 
       <IonContent className="ion-padding">
+
         <IonItem>
           <IonText color="secondary">
             <h1>Edit Account</h1>
           </IonText>
         </IonItem>
+
         <br />
 
         <IonGrid>
+
           <IonRow>
             <IonCol>
               <IonInput
                 label="Username"
-                type="text"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Enter username"
                 value={username}
                 onIonChange={(e) => setUsername(e.detail.value!)}
               />
             </IonCol>
           </IonRow>
+
           <IonRow>
             <IonCol size="6">
               <IonInput
                 label="First Name"
-                type="text"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Enter First Name"
                 value={firstName}
                 onIonChange={(e) => setFirstName(e.detail.value!)}
               />
             </IonCol>
+
             <IonCol size="6">
               <IonInput
                 label="Last Name"
-                type="text"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Enter Last Name"
                 value={lastName}
                 onIonChange={(e) => setLastName(e.detail.value!)}
               />
             </IonCol>
           </IonRow>
+
         </IonGrid>
 
         <IonGrid>
+
           <IonRow>
             <IonText color="secondary">
               <h3>Change Password</h3>
             </IonText>
+          </IonRow>
+
+          <IonRow>
             <IonCol size="12">
               <IonInput
                 label="New Password"
                 type="password"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Enter New Password"
                 value={password}
                 onIonChange={(e) => setPassword(e.detail.value!)}
               >
@@ -228,6 +219,7 @@ const UserAccount: React.FC = () => {
               </IonInput>
             </IonCol>
           </IonRow>
+
           <IonRow>
             <IonCol size="12">
               <IonInput
@@ -235,7 +227,6 @@ const UserAccount: React.FC = () => {
                 type="password"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Confirm New Password"
                 value={confirmPassword}
                 onIonChange={(e) => setConfirmPassword(e.detail.value!)}
               >
@@ -243,20 +234,24 @@ const UserAccount: React.FC = () => {
               </IonInput>
             </IonCol>
           </IonRow>
+
         </IonGrid>
 
         <IonGrid>
+
           <IonRow>
             <IonText color="secondary">
               <h3>Confirm Changes</h3>
             </IonText>
+          </IonRow>
+
+          <IonRow>
             <IonCol size="12">
               <IonInput
                 label="Current Password"
                 type="password"
                 labelPlacement="floating"
                 fill="outline"
-                placeholder="Enter Current Password to Save Changes"
                 value={currentPassword}
                 onIonChange={(e) => setCurrentPassword(e.detail.value!)}
               >
@@ -264,9 +259,10 @@ const UserAccount: React.FC = () => {
               </IonInput>
             </IonCol>
           </IonRow>
+
         </IonGrid>
 
-        <IonButton expand="full" onClick={handleUpdate} shape="round">
+        <IonButton expand="full" shape="round" onClick={handleUpdate}>
           Update Account
         </IonButton>
 
@@ -276,7 +272,9 @@ const UserAccount: React.FC = () => {
           message={alertMessage}
           buttons={['OK']}
         />
+
       </IonContent>
+
     </IonPage>
   );
 };
