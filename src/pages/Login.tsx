@@ -63,7 +63,7 @@ const Login: React.FC = () => {
     if (error) {
       setErrorMessage("Invalid email or password.");
     } else {
-      history.push("/Dashboard");
+      history.push("/dashboard");
     }
   };
 
@@ -78,7 +78,7 @@ const handleForgotPassword = async () => {
   setLoading(true);
 
   const redirectTo =
-    "https://tsdcoffice.github.io/monitoring/#/reset-password";
+    "https://tsdcoffice.github.io/monitoring/reset-password";
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
