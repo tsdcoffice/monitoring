@@ -14,6 +14,7 @@ import {
   IonRow,
   IonCol,
   IonInputPasswordToggle,
+  IonToolbar,
 } from '@ionic/react';
 import { supabase } from '../supabaseClient';
 import { useHistory } from 'react-router-dom';
@@ -156,6 +157,7 @@ const UserAccount: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
+        
         <IonButtons slot="start">
           <IonBackButton defaultHref="/app" />
         </IonButtons>

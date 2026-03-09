@@ -90,7 +90,7 @@ const Scholarship: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           
 
           {/* ✅ SAME BACK BUTTON AS TRAINING */}
@@ -100,7 +100,7 @@ const Scholarship: React.FC = () => {
             </IonButton>
           </IonButtons>
 
-          <IonTitle>SCHOLARSHIP DASHBOARD</IonTitle>
+          <IonTitle style={{ fontWeight: 600 }}>SCHOLARSHIP DASHBOARD</IonTitle>
 
           <IonButtons slot="end">
             <IonSearchbar
@@ -136,13 +136,16 @@ const Scholarship: React.FC = () => {
               <IonCol size="12" sizeMd="4" key={type.id}>
                 <IonCard
                   button
-                  onClick={() => goToStudents(type.name)}
-                  style={{
-                    textAlign: 'center',
-                    backgroundColor: '#3862f8',
-                    color: '#fff',
-                    borderRadius: '15px',
-                  }}
+                  onClick={() => goToStudents()}
+                    style={{
+                    backgroundColor: '#10377a',
+                    color: '#ffffff',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    borderLeft: '5px solid #d68718', // Gamay ra kaayo nga orange sa kilid
+                    margin: '10px',
+                    textAlign: 'center' // Mas professional ang left-aligned sa dashboard
+                    }}
                 >
                   <IonCardHeader>
                     <IonCardTitle
@@ -172,10 +175,12 @@ const Scholarship: React.FC = () => {
                 button
                 onClick={() => goToStudents()}
                 style={{
-                  textAlign: 'center',
-                  backgroundColor: '#3862f8',
-                  color: '#fff',
-                  borderRadius: '15px',
+                background: 'linear-gradient(180deg, #10377a 92%, #d68718 100%)',
+                color: '#ffffff',
+                borderRadius: '12px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                margin: '10px',
+                textAlign: 'center'
                 }}
               >
                 <IonCardHeader>

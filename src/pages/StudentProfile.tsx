@@ -133,7 +133,7 @@ const StudentProfile: React.FC = () => {
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
 
           {/* BACK BUTTON DIRECT TO DASHBOARD */}
           <IonButtons slot="start">
@@ -142,7 +142,7 @@ const StudentProfile: React.FC = () => {
             </IonButton>
           </IonButtons>
 
-          <IonTitle>Student Profiling</IonTitle>
+          <IonTitle style={{ fontWeight: 600 }}>STUDENT PROFILING FORM</IonTitle>
 
         </IonToolbar>
       </IonHeader>

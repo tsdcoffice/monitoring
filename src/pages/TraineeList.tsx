@@ -305,7 +305,7 @@ const generateTableRows = () => {
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
               <IonButton
                 fill="clear"
@@ -319,8 +319,8 @@ const generateTableRows = () => {
           </IonButtons>
           <IonTitle>
             {slug === 'all' || !slug
-              ? 'All Trainees'
-              : `${slug.replace(/-/g,' ').toUpperCase()} Trainees`}
+              ? 'ALL TRAINEES'
+              : `${slug.replace(/-/g,' ').toUpperCase()} TRAINEES`}
           </IonTitle>
         </IonToolbar>
       </IonHeader>

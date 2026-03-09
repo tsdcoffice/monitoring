@@ -119,9 +119,13 @@ const Menu: React.FC = () => {
         </IonMenuToggle>
         
         <div style={{ padding: '20px 15px' }}>
-          <IonButton expand="block" color="danger" onClick={handleLogout}>
+         <IonButton 
+            expand="block" 
+            style={{ '--background': '#d68718', '--color': '#ffffff' }} 
+            onClick={handleLogout}
+            >
             <IonIcon slot="start" icon={logOutOutline} />
-            Logout
+              Logout
           </IonButton>
         </div>
 

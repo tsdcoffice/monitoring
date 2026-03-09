@@ -98,11 +98,11 @@ const Dashboard: React.FC = () => {
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
-            <IonMenuButton />
+            <IonMenuButton style={{ color: '#ffffff' }} />
           </IonButtons>
-          <IonTitle style={{ fontWeight: 'bold' }}>DASHBOARD</IonTitle>
+            <IonTitle style={{ fontWeight: 600, color: '#ffffff' }}>DASHBOARD</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -119,7 +119,7 @@ const Dashboard: React.FC = () => {
 
             <IonCol size="12" sizeMd="6">
               <IonCard button onClick={() => history.push('/scholarship')}
-                style={{ background: 'linear-gradient(135deg, #efae3f 0%, #f1ab33 100%)', borderRadius: '15px' }}>
+                style={{ background: ' #d68718', borderRadius: '15px' }}>
                 <IonCardHeader>
                   <IonCardTitle style={{ color: 'white' }}>
                     Scholarship ({totalStudents})
@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
 
             <IonCol size="12" sizeMd="6">
               <IonCard button onClick={() => history.push('/training')}
-                style={{ background: 'linear-gradient(135deg, #3880ff 0%, #6096ff 100%)', borderRadius: '15px' }}>
+                style={{ background: '#10377a', borderRadius: '15px' }}>
                 
                 <IonCardHeader>
                   <IonCardTitle style={{ color: 'white' }}>

@@ -116,40 +116,40 @@ const handleKeyDown = (e: any) => {
   return (
     <><IonPage>
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
             <IonButton routerLink="/dashboard" routerDirection="root">
               <IonIcon icon={arrowBackOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
-          <IonTitle>TSDC SKILSS TRAINING DASHBOARD</IonTitle>
+          <IonTitle style={{ fontWeight: 600 }}>TSDC SKILSS TRAINING DASHBOARD</IonTitle>
 
           <IonButtons slot="end">
-      <IonSearchbar
-  value={searchText}
-  debounce={300}
-  placeholder="Search Trainee..."
-  onIonChange={(e) => setSearchText(e.detail.value!)}
-  onKeyDown={(e: any) => {
-    if (e.key === "Enter") {
-      const value = e.target.value;
-      if (!value.trim()) return;
+            <IonSearchbar
+              value={searchText}
+              debounce={300}
+              placeholder="Search Trainee..."
+              onIonChange={(e) => setSearchText(e.detail.value!)}
+              onKeyDown={(e: any) => {
+                  if (e.key === "Enter") {
+                    const value = e.target.value;
+                  if (!value.trim()) return;
 
-      history.push(`/trainees/all?query=${encodeURIComponent(value)}`);
-      setSearchText("");
-    }
-  }}
-  style={{
-    width: "260px",
-    "--border-radius": "10px"
-  }}
-/>
+              history.push(`/trainees/all?query=${encodeURIComponent(value)}`);
+              setSearchText("");
+                }
+              }}
+              style={{
+                width: "260px",
+                "--border-radius": "10px"
+                }}
+            />
           </IonButtons>
         
       </IonToolbar>
     </IonHeader><IonContent fullscreen className="ion-padding">
         <IonText>
-          <h2 style={{ textAlign: 'center' }}>TSDC Skills Training Programs</h2>
+          <h2 style={{ textAlign: 'center', fontWeight: 600 }}>TSDC Skills Training Programs</h2>
         </IonText>
 
         {/* Courses */}
@@ -161,18 +161,24 @@ const handleKeyDown = (e: any) => {
                   button
                   onClick={() => goToTrainees(course.slug)}
                   style={{
-                    textAlign: 'center',
-                    background: 'linear-gradient(135deg, #6367FF, #8A8EFF)',
-                    color: '#fff',
-                    borderRadius: '20px',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                  }}
+                    backgroundColor: '#10377a',
+                    color: '#ffffff',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    borderLeft: '5px solid #d68718', // Gamay ra kaayo nga orange sa kilid
+                    margin: '10px',
+                    textAlign: 'center' // Mas professional ang left-aligned sa dashboard
+                    }}
                   onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
                   onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '1rem', fontWeight: 600 }}>
+                    <IonCardTitle style={{
+                      textTransform: 'uppercase',
+                      fontWeight: 600,
+                      color: '#ffffff'
+                      }}
+                      >
                       {course.name.toUpperCase()}
                     </IonCardTitle>
                   </IonCardHeader>
@@ -195,15 +201,21 @@ const handleKeyDown = (e: any) => {
                 button
                 onClick={() => goToTrainees('all')}
                 style={{
-                  textAlign: 'center',
-                  background: 'linear-gradient(135deg, #FF6363, #FF8A8A)',
-                  color: '#fff',
-                  borderRadius: '25px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                background: 'linear-gradient(180deg, #10377a 92%, #d68718 100%)',
+                color: '#ffffff',
+                borderRadius: '12px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                margin: '10px',
+                textAlign: 'center'
                 }}
               >
                 <IonCardHeader>
-                  <IonCardTitle style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                  <IonCardTitle style={{
+                    textTransform: 'uppercase',
+                    fontWeight: 600,
+                    color: '#ffffff'
+                    }}
+                    >
                     TOTAL TRAINEES
                   </IonCardTitle>
                 </IonCardHeader>

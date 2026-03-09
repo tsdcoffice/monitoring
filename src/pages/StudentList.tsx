@@ -356,7 +356,7 @@ const StudentList: React.FC = () => {
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
             <IonButton onClick={handleBack}>
               <IonIcon icon={arrowBackOutline}/>

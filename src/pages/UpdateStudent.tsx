@@ -104,7 +104,7 @@ if (data) {
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
             <IonBackButton defaultHref="/student-list"/>
           </IonButtons>
