@@ -81,7 +81,9 @@ const StudentList: React.FC = () => {
   const [selectedIP, setSelectedIP] = useState('');
   const [selectedSchool, setSelectedSchool] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  
 
   useEffect(() => {
     fetchStudents();
@@ -101,6 +103,7 @@ const StudentList: React.FC = () => {
     selectedIP,
     selectedSchool,
     selectedCourse,
+    selectedYear,
     selectedStatus,
     sortOption
   ]);
@@ -170,6 +173,10 @@ const StudentList: React.FC = () => {
       data = data.filter(s => (s.status || 'On-going') === selectedStatus);
     }
 
+    if (selectedYear) {
+  data = data.filter(s => s.year_level === selectedYear);
+}
+
     switch (sortOption) {
       case 'az':
         data.sort((a, b) => a.lastname.localeCompare(b.lastname));
@@ -205,6 +212,7 @@ const StudentList: React.FC = () => {
   setSelectedIP('');
   setSelectedSchool('');
   setSelectedCourse('');
+  setSelectedYear('');
   setSelectedStatus('');
   setSortOption('az');
   setShowFilter(false);
@@ -434,6 +442,7 @@ const StudentList: React.FC = () => {
                 <IonSelectOption value="ip">IP</IonSelectOption>
                 <IonSelectOption value="school">School</IonSelectOption>
                 <IonSelectOption value="course">Course</IonSelectOption>
+                <IonSelectOption value="year">Year Level</IonSelectOption>
                 <IonSelectOption value="status">Status</IonSelectOption>
               </IonSelect>
             </IonItem>
@@ -508,6 +517,26 @@ const StudentList: React.FC = () => {
         {course}
       </IonSelectOption>
     ))}
+  </IonSelect>
+</IonItem>
+)}
+
+{filterType === 'year' && (
+<IonItem>
+  <IonLabel position="stacked">Year Level</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedYear}
+    onIonChange={e => {
+      setSelectedYear(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    <IonSelectOption value="1st Year">1st Year</IonSelectOption>
+    <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
+    <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
+    <IonSelectOption value="4th Year">4th Year</IonSelectOption>
+    <IonSelectOption value="5th Year">5th Year</IonSelectOption>
   </IonSelect>
 </IonItem>
 )}
