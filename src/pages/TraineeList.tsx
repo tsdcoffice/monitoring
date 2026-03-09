@@ -10,6 +10,9 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
+import * as XLSX from "xlsx";
+import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
+import { saveAs } from "file-saver";
 
 import {
   printOutline,
@@ -95,6 +98,7 @@ const TraineeList: React.FC = () => {
 
   const [sortOption, setSortOption] = useState('date_desc');
   const [showFilter, setShowFilter] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -301,6 +305,86 @@ const generateTableRows = () => {
   return header + rows;
 };
 
+   const downloadExcel = () => {
+
+  const data = trainees.map(t => ({
+    Barangay: t.barangay,
+    Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
+    Gender: t.gender,
+    Education: t.educational_attainment,
+    IP: t.is_ip ? "IP" : "Not IP",
+    Date: new Date(t.created_at).toLocaleDateString(),
+    "Training Type": trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ""
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array"
+  });
+
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+
+  saveAs(blob, "tsdc_trainee_list.xlsx");
+
+  setShowDownload(false);
+};
+
+  const downloadWord = async () => {
+
+  const rows = [
+
+    new TableRow({
+      children: [
+        new TableCell({children:[new Paragraph("Barangay")]}),
+        new TableCell({children:[new Paragraph("Name")]}),
+        new TableCell({children:[new Paragraph("Gender")]}),
+        new TableCell({children:[new Paragraph("Education")]}),
+        new TableCell({children:[new Paragraph("IP")]}),
+        new TableCell({children:[new Paragraph("Date")]}),
+        new TableCell({children:[new Paragraph("Training Type")]})
+      ]
+    }),
+
+    ...trainees.map(t =>
+      new TableRow({
+        children: [
+          new TableCell({children:[new Paragraph(t.barangay)]}),
+          new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
+          new TableCell({children:[new Paragraph(t.gender)]}),
+          new TableCell({children:[new Paragraph(t.educational_attainment)]}),
+          new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
+          new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
+          new TableCell({children:[new Paragraph(trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "")]})
+        ]
+      })
+    )
+  ];
+
+  const doc = new Document({
+    sections: [{
+      children: [
+        new Paragraph({
+          text: "TSDC Trainee List",
+          heading: "Heading1"
+        }),
+        new Paragraph(" "),
+        new Table({ rows })
+      ]
+    }]
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  saveAs(blob, "tsdc_trainee_list.docx");
+
+  setShowDownload(false);
+};
+
   return (
     <IonPage>
 
@@ -332,9 +416,9 @@ const generateTableRows = () => {
             <IonButton fill="clear" onClick={handlePrint}>
               <IonIcon icon={printOutline}/>
             </IonButton>
-            <IonButton fill="clear" onClick={handleDownloadPDF}>
-              <IonIcon icon={downloadOutline}/>
-            </IonButton>
+            <IonButton fill="clear" onClick={() => setShowDownload(true)}>
+  <IonIcon icon={downloadOutline}/>
+</IonButton>
           </div>
 
           <div style={{display:'flex',gap:'8px'}}>
@@ -459,6 +543,26 @@ const generateTableRows = () => {
         </div>
 
       </IonContent>
+      <IonPopover
+  isOpen={showDownload}
+  onDidDismiss={() => setShowDownload(false)}
+>
+  <IonList style={{minWidth:'200px'}}>
+
+    <IonItem button onClick={downloadExcel}>
+      <IonLabel>Download as Excel</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={handleDownloadPDF}>
+      <IonLabel>Download as PDF</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={downloadWord}>
+      <IonLabel>Download as Word</IonLabel>
+    </IonItem>
+
+  </IonList>
+</IonPopover>
     </IonPage>
   );
 };
