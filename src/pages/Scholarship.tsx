@@ -91,6 +91,7 @@ const Scholarship: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar color="primary">
+          
 
           {/* ✅ SAME BACK BUTTON AS TRAINING */}
           <IonButtons slot="start">
@@ -99,26 +100,26 @@ const Scholarship: React.FC = () => {
             </IonButton>
           </IonButtons>
 
-          <IonTitle>Scholarship Dashboard</IonTitle>
+          <IonTitle>SCHOLARSHIP DASHBOARD</IonTitle>
 
           <IonButtons slot="end">
-  <IonSearchbar
-  value={searchText}
-  debounce={300}
-  placeholder="Search Student..."
-  onIonChange={(e) => setSearchText(e.detail.value!)}
-  onKeyDown={(e: any) => {
-    if (e.key === "Enter") {
-      const value = e.target.value;
-      if (!value.trim()) return;
+            <IonSearchbar
+              value={searchText}
+              debounce={300}
+              placeholder="Search Student..."
+              onIonChange={(e) => setSearchText(e.detail.value!)}
+              onKeyDown={(e: any) => {
+                if (e.key === "Enter") {
+                const value = e.target.value;
+                if (!value.trim()) return;
 
-      history.push(`/students?query=${encodeURIComponent(value)}`);
-      setSearchText("");
-    }
-  }}
-  style={{
-    width: "260px",
-    "--border-radius": "10px"
+              history.push(`/students?query=${encodeURIComponent(value)}`);
+              setSearchText("");
+                  }
+              }}
+    style={{
+      width: "260px",
+      "--border-radius": "10px"
   }}
 />
 </IonButtons>
@@ -138,16 +139,24 @@ const Scholarship: React.FC = () => {
                   onClick={() => goToStudents(type.name)}
                   style={{
                     textAlign: 'center',
-                    backgroundColor: '#6367FF',
+                    backgroundColor: '#3862f8',
                     color: '#fff',
                     borderRadius: '15px',
                   }}
                 >
                   <IonCardHeader>
-                    <IonCardTitle>{type.name} Scholars</IonCardTitle>
+                    <IonCardTitle
+                      style={{
+                      textTransform: 'uppercase',
+                      fontWeight: 600,
+                      color: '#ffffff'
+                      }}
+                      >
+                      {type.name} Scholars
+                    </IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0 }}>
+                    <h1 style={{ fontSize: '2.5rem', fontWeight: 600, margin: 0 }}>
                       {counts[type.name] || 0}
                     </h1>
                   </IonCardContent>
@@ -164,13 +173,21 @@ const Scholarship: React.FC = () => {
                 onClick={() => goToStudents()}
                 style={{
                   textAlign: 'center',
-                  backgroundColor: '#8494FF',
+                  backgroundColor: '#3862f8',
                   color: '#fff',
                   borderRadius: '15px',
                 }}
               >
                 <IonCardHeader>
-                  <IonCardTitle>Total Scholars</IonCardTitle>
+                  <IonCardTitle
+                    style={{
+                    textTransform: 'uppercase',
+                    fontWeight: 600,
+                    color: '#ffffff'
+                    }}
+                    >
+                    Total Scholars
+                  </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
                   <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0 }}>

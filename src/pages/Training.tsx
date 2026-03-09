@@ -122,7 +122,7 @@ const handleKeyDown = (e: any) => {
               <IonIcon icon={arrowBackOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
-          <IonTitle>TSDC Skills Training Dashboard</IonTitle>
+          <IonTitle>TSDC SKILSS TRAINING DASHBOARD</IonTitle>
 
           <IonButtons slot="end">
       <IonSearchbar
@@ -172,12 +172,12 @@ const handleKeyDown = (e: any) => {
                   onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                 >
                   <IonCardHeader>
-                    <IonCardTitle style={{ fontSize: '1rem', fontWeight: 'bold' }}>
-                      {course.name}
+                    <IonCardTitle style={{ fontSize: '1rem', fontWeight: 600 }}>
+                      {course.name.toUpperCase()}
                     </IonCardTitle>
                   </IonCardHeader>
                   <IonCardContent>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: 0 }}>
                       {courseCounts[course.slug] || 0}
                     </h1>
                   </IonCardContent>

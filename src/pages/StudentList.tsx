@@ -364,7 +364,7 @@ const StudentList: React.FC = () => {
           </IonButtons>
 
           <IonTitle>
-            {typeQuery ? `${typeQuery.toUpperCase()} Scholars` : 'All Scholars'}
+            {typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : 'ALL SCHOLARS'}
           </IonTitle>
         </IonToolbar>
       </IonHeader>

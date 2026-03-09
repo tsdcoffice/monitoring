@@ -76,7 +76,7 @@ const Menu: React.FC = () => {
           <IonMenuToggle>
             <IonIcon icon={menuOutline} style={{ fontSize: '28px', color: '#0038A8', cursor: 'pointer' }} />
           </IonMenuToggle>
-          <h2 style={{ margin: 0, color: '#0038A8', fontWeight: 'bold' }}>TSDC Monitoring</h2>
+          <h2 style={{ margin: 0, color: '#0038A8', fontWeight: 'bold' }}>TSDC MONITORING</h2>
         </div>
 
         {/* Navigation Items */}

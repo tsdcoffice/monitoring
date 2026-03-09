@@ -16,12 +16,11 @@ import {
   Title,
   Tooltip,
   Legend,
-  ArcElement,
   ChartOptions
 } from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const barangays = [
   "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
@@ -37,7 +36,6 @@ const Dashboard: React.FC = () => {
 
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalTrainees, setTotalTrainees] = useState(0);
-  const [genderStats, setGenderStats] = useState({ male: 0, female: 0 });
   const [barangayCounts, setBarangayCounts] = useState<number[]>([]);
 
   useIonViewWillEnter(() => {
@@ -45,6 +43,7 @@ const Dashboard: React.FC = () => {
   });
 
   const fetchDashboardData = async () => {
+
     const { count: studentCount } = await supabase
       .from('students')
       .select('*', { count: 'exact', head: true });
@@ -55,24 +54,6 @@ const Dashboard: React.FC = () => {
 
     setTotalStudents(studentCount || 0);
     setTotalTrainees(traineeCount || 0);
-
-    const { data: studentGender } = await supabase
-      .from('students')
-      .select('gender');
-
-    const { data: traineeGender } = await supabase
-      .from('trainees')
-      .select('gender');
-
-    let male = 0;
-    let female = 0;
-
-    [...(studentGender || []), ...(traineeGender || [])].forEach((person: any) => {
-      if (person.gender === 'Male') male++;
-      if (person.gender === 'Female') female++;
-    });
-
-    setGenderStats({ male, female });
 
     const counts = new Array(barangays.length).fill(0);
 
@@ -114,15 +95,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const pieData = {
-    labels: ['Male', 'Female'],
-    datasets: [{
-      data: [genderStats.male, genderStats.female],
-      backgroundColor: ['#3880ff', '#eb445a'],
-      borderWidth: 0,
-    }]
-  };
-
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
@@ -144,18 +116,19 @@ const Dashboard: React.FC = () => {
 
         <IonGrid>
           <IonRow>
+
             <IonCol size="12" sizeMd="6">
               <IonCard button onClick={() => history.push('/scholarship')}
-                style={{ background: 'linear-gradient(135deg, #3880ff 0%, #6096ff 100%)', borderRadius: '15px' }}>
+                style={{ background: 'linear-gradient(135deg, #efae3f 0%, #f1ab33 100%)', borderRadius: '15px' }}>
                 <IonCardHeader>
                   <IonCardTitle style={{ color: 'white' }}>
                     Scholarship ({totalStudents})
                   </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  <IonProgressBar 
-                    value={totalPeople > 0 ? totalStudents / totalPeople : 0} 
-                    style={{ height: '8px' }} 
+                  <IonProgressBar
+                    value={totalPeople > 0 ? totalStudents / totalPeople : 0}
+                    style={{ height: '8px' }}
                   />
                 </IonCardContent>
               </IonCard>
@@ -163,20 +136,22 @@ const Dashboard: React.FC = () => {
 
             <IonCol size="12" sizeMd="6">
               <IonCard button onClick={() => history.push('/training')}
-                style={{ background: 'linear-gradient(135deg, #2dd36f 0%, #52e08a 100%)', borderRadius: '15px' }}>
+                style={{ background: 'linear-gradient(135deg, #3880ff 0%, #6096ff 100%)', borderRadius: '15px' }}>
+                
                 <IonCardHeader>
                   <IonCardTitle style={{ color: 'white' }}>
                     Training ({totalTrainees})
                   </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  <IonProgressBar 
-                    value={totalPeople > 0 ? totalTrainees / totalPeople : 0} 
-                    style={{ height: '8px' }} 
+                  <IonProgressBar
+                    value={totalPeople > 0 ? totalTrainees / totalPeople : 0}
+                    style={{ height: '8px' }}
                   />
                 </IonCardContent>
               </IonCard>
             </IonCol>
+
           </IonRow>
         </IonGrid>
 
@@ -187,17 +162,6 @@ const Dashboard: React.FC = () => {
           <IonCardContent>
             <div style={{ height: '400px' }}>
               <Bar data={barData} options={barOptions} />
-            </div>
-          </IonCardContent>
-        </IonCard>
-
-        <IonCard style={{ borderRadius: '15px' }}>
-          <IonCardHeader>
-            <IonCardTitle>Gender Distribution</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <div style={{ height: '250px' }}>
-              <Pie data={pieData} options={{ maintainAspectRatio: false }} />
             </div>
           </IonCardContent>
         </IonCard>
