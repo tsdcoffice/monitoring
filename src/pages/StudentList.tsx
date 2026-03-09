@@ -37,6 +37,8 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from "xlsx";
 import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
 import { saveAs } from "file-saver";
+import headerImg from "../pics/header.png";
+import { ImageRun } from "docx";
 
 
 interface Student {
@@ -271,7 +273,10 @@ if (data) {
         </style>
       </head>
       <body>
-        <h2 style="text-align:center">Scholarship Student List</h2>
+
+<div style="text-align:center; margin-bottom:15px;">
+  <img src="${headerImg}" style="width:100%; max-width:700px;" />
+</div>
         <table>
           <thead>
             <tr>
@@ -319,51 +324,50 @@ if (data) {
 
   /* PDF */
   const handleDownloadPDF = () => {
-    const doc = new jsPDF();
 
-    const tableData = filteredStudents.map(s => [
-      s.barangay,
-      `${s.lastname}, ${s.firstname}`,
-      s.gender,
-      s.school,
-      s.course || '-',
-      s.year_level || '-',
-      s.is_ip ? 'IP' : 'Not IP',
-      s.scholarship_types?.name || '-' ,
-      s.status || 'On-going'
-    ]);
+  const doc = new jsPDF();
 
-    autoTable(doc, {
-  head: [['Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
-  body: tableData,
-  startY: 20,
-  styles: { fontSize: 8 },
+  // ADD HEADER IMAGE
+  const img = new Image();
+  img.src = headerImg;
 
-  didParseCell: function (data) {
+  doc.addImage(img, "PNG", 10, 5, 190, 25);
 
-    if (data.column.index === 8) { // Status column
+  const tableData = filteredStudents.map(s => [
+    s.barangay,
+    `${s.lastname}, ${s.firstname}`,
+    s.gender,
+    s.school,
+    s.course || '-',
+    s.year_level || '-',
+    s.is_ip ? 'IP' : 'Not IP',
+    s.scholarship_types?.name || '-',
+    s.status || 'On-going'
+  ]);
 
-      const status = data.cell.raw;
+  autoTable(doc, {
+    head: [['Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
+    body: tableData,
+    startY: 35,
+    styles: { fontSize: 8 },
 
-      if (status === 'Graduated') {
-        data.cell.styles.textColor = [0, 128, 0]; // green
+    didParseCell: function (data) {
+
+      if (data.column.index === 8) {
+
+        const status = data.cell.raw;
+
+        if (status === 'Graduated') data.cell.styles.textColor = [0,128,0];
+        if (status === 'Stopped') data.cell.styles.textColor = [200,0,0];
+        if (status === 'On-going') data.cell.styles.textColor = [120,120,120];
+
+        data.cell.styles.fontStyle = 'bold';
       }
-
-      if (status === 'Stopped') {
-        data.cell.styles.textColor = [200, 0, 0]; // red
-      }
-
-      if (status === 'On-going') {
-        data.cell.styles.textColor = [120, 120, 120]; // gray
-      }
-
-      data.cell.styles.fontStyle = 'bold';
     }
-  }
-});
+  });
 
-    doc.save('scholarship_student_list.pdf');
-  };
+  doc.save('scholarship_student_list.pdf');
+};
 
     const getStatusColor = (status: string | null) => {
       if (status === 'Graduated') return 'success';
@@ -430,7 +434,15 @@ const handleBulkUpdate = async () => {
     Status: s.status || "On-going"
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
+  const worksheet = XLSX.utils.json_to_sheet([]);
+
+XLSX.utils.sheet_add_aoa(worksheet, [
+  ["TSDC Scholarship Monitoring System"],
+  ["Scholarship Student List"],
+  []
+]);
+
+XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
 
   // Auto column width
   worksheet["!cols"] = [
@@ -501,17 +513,26 @@ const handleBulkUpdate = async () => {
       {
         children: [
 
-          new Paragraph({
-            text: "Scholarship Student List",
-            heading: "Heading1"
-          }),
+  new Paragraph({
+    children: [
+      new ImageRun({
+        data: await fetch(headerImg).then(r => r.arrayBuffer()),
+        transformation: {
+          width: 600,
+          height: 120
+        },
+        type: "png"
+      })
+    ]
+  }),
 
-          new Paragraph(" "),
+  new Paragraph(" "),
 
-          new Table({
-            rows
-          })
-        ]
+  new Table({
+    rows
+  })
+
+]
       }
     ]
   });
