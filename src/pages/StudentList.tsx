@@ -83,6 +83,9 @@ const StudentList: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [bulkYear, setBulkYear] = useState('');
+  const [showSelect, setShowSelect] = useState(false);
   
 
   useEffect(() => {
@@ -132,7 +135,30 @@ const StudentList: React.FC = () => {
   }
 
     const { data } = await query;
-    setStudents(data || []);
+
+if (data) {
+
+  const updated = data.map((s: Student) => {
+
+    if (s.status === 'Graduated' && s.year_level !== 'Graduated') {
+
+      // auto update database
+      supabase
+        .from('students')
+        .update({ year_level: 'Graduated' })
+        .eq('id', s.id);
+
+      return { ...s, year_level: 'Graduated' };
+    }
+
+    return s;
+  });
+
+  setStudents(updated);
+
+} else {
+  setStudents([]);
+}
   };
 
   const applyFilters = () => {
@@ -215,6 +241,8 @@ const StudentList: React.FC = () => {
   setSelectedYear('');
   setSelectedStatus('');
   setSortOption('az');
+  setSelectedStudents([]); // clear selected rows
+  setShowSelect(false); // hide select column
   setShowFilter(false);
 };
 
@@ -349,8 +377,40 @@ const StudentList: React.FC = () => {
 };
 
     const handleUpdate = (studentId: string) => {
-      history.push(`/update-student/${studentId}`);
-    };
+  history.push(`/update-student/${studentId}`);
+};
+
+const toggleSelectStudent = (id: string) => {
+  setSelectedStudents(prev =>
+    prev.includes(id)
+      ? prev.filter(s => s !== id)
+      : [...prev, id]
+  );
+};
+
+const updateYearLevel = async (studentId: string, year: string) => {
+  await supabase
+    .from('students')
+    .update({ year_level: year })
+    .eq('id', studentId);
+
+  fetchStudents();
+};
+
+const handleBulkUpdate = async () => {
+
+  if (!bulkYear || selectedStudents.length === 0) return;
+
+  await supabase
+    .from('students')
+    .update({ year_level: bulkYear })
+    .in('id', selectedStudents);
+
+  setSelectedStudents([]);
+  setBulkYear('');
+
+  fetchStudents();
+};
 
   return (
     <IonPage>
@@ -528,9 +588,30 @@ const StudentList: React.FC = () => {
     interface="popover"
     value={selectedYear}
     onIonChange={e => {
-      setSelectedYear(e.detail.value);
-      setShowFilter(false);
-    }}
+
+  const year = e.detail.value;
+
+  setSelectedYear(year);
+  setShowFilter(false);
+
+  if (year) {
+
+    setShowSelect(true);
+
+    const ids = students
+      .filter(s => s.year_level === year)
+      .map(s => s.id);
+
+    setSelectedStudents(ids);
+
+  } else {
+
+    setShowSelect(false);
+    setSelectedStudents([]);
+
+  }
+
+}}
   >
     <IonSelectOption value="1st Year">1st Year</IonSelectOption>
     <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
@@ -576,8 +657,34 @@ const StudentList: React.FC = () => {
           <h2>Total Displayed: {filteredStudents.length}</h2>
         </IonText>
 
+{showSelect && (
+<div style={{display:'flex',gap:'10px',marginBottom:'10px'}}>
+
+<IonSelect
+  placeholder="Change Year Level"
+  value={bulkYear}
+  onIonChange={e => setBulkYear(e.detail.value)}
+>
+  <IonSelectOption value="1st Year">1st Year</IonSelectOption>
+  <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
+  <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
+  <IonSelectOption value="4th Year">4th Year</IonSelectOption>
+  <IonSelectOption value="5th Year">5th Year</IonSelectOption>
+</IonSelect>
+
+<IonButton
+  disabled={selectedStudents.length === 0}
+  onClick={handleBulkUpdate}
+>
+  Update Selected
+</IonButton>
+
+</div>
+)}
+
         <IonGrid>
           <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
+            {showSelect && <IonCol size="1">Select</IonCol>}
             <IonCol>Barangay</IonCol>
             <IonCol>Name</IonCol>
             <IonCol>Gender</IonCol>
@@ -594,12 +701,55 @@ const StudentList: React.FC = () => {
             <IonRow key={student.id}
               style={{ backgroundColor: getRowColor(student.status) }}
             >
+              {showSelect && (
+<IonCol size="1">
+  <input
+    type="checkbox"
+    checked={selectedStudents.includes(student.id)}
+    onChange={() => toggleSelectStudent(student.id)}
+  />
+</IonCol>
+)}
               <IonCol>{student.barangay}</IonCol>
               <IonCol>{student.lastname}, {student.firstname}</IonCol>
               <IonCol>{student.gender}</IonCol>
               <IonCol>{student.school}</IonCol>
               <IonCol>{student.course || '-'}</IonCol>
-              <IonCol>{student.year_level || '-'}</IonCol>
+              <IonCol>
+
+{student.status === 'Graduated' ? (
+
+<IonText color="success">
+  <b>Graduated</b>
+</IonText>
+
+) : showSelect ? (
+
+<IonSelect
+  value={student.year_level}
+  placeholder="-"
+  onIonChange={e =>
+    updateYearLevel(student.id, e.detail.value)
+  }
+>
+
+  <IonSelectOption value="1st Year">1st Year</IonSelectOption>
+  <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
+  <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
+  <IonSelectOption value="4th Year">4th Year</IonSelectOption>
+  <IonSelectOption value="5th Year">5th Year</IonSelectOption>
+
+</IonSelect>
+
+) : (
+
+<IonText>
+  {student.year_level || '-'}
+</IonText>
+
+)}
+
+</IonCol>
               <IonCol>{student.is_ip ? 'IP' : 'Not IP'}</IonCol>
               <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
               {/* STATUS COLUMN */}
