@@ -16,7 +16,8 @@ import {
   IonBackButton,
   IonButton,
   IonIcon,
-  IonInput
+  IonInput,
+  IonSearchbar
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -113,40 +114,40 @@ const handleKeyDown = (e: any) => {
 };
 
   return (
-    <IonPage>
+    <><IonPage>
       <IonHeader>
         <IonToolbar color="primary">
           <IonButtons slot="start">
             <IonButton routerLink="/dashboard" routerDirection="root">
-            <IonIcon icon={arrowBackOutline} slot="icon-only" />
+              <IonIcon icon={arrowBackOutline} slot="icon-only" />
             </IonButton>
           </IonButtons>
           <IonTitle>TSDC Skills Training Dashboard</IonTitle>
 
           <IonButtons slot="end">
-            <IonInput
-              placeholder="Search trainee..."
-              value={searchText}
-              onIonInput={(e) => setSearchText(e.detail.value!)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch();
-                }
-              }}
-              style={{
-                maxWidth: '200px',
-                marginRight: '5px',
-                color: '#fff'
-              }}
-            />
-            <IonButton onClick={handleSearch}>
-              <IonIcon icon={search} />
-            </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+      <IonSearchbar
+  value={searchText}
+  debounce={300}
+  placeholder="Search Trainee..."
+  onIonChange={(e) => setSearchText(e.detail.value!)}
+  onKeyDown={(e: any) => {
+    if (e.key === "Enter") {
+      const value = e.target.value;
+      if (!value.trim()) return;
 
-      <IonContent fullscreen className="ion-padding">
+      history.push(`/trainees/all?query=${encodeURIComponent(value)}`);
+      setSearchText("");
+    }
+  }}
+  style={{
+    width: "260px",
+    "--border-radius": "10px"
+  }}
+/>
+          </IonButtons>
+        
+      </IonToolbar>
+    </IonHeader><IonContent fullscreen className="ion-padding">
         <IonText>
           <h2 style={{ textAlign: 'center' }}>TSDC Skills Training Programs</h2>
         </IonText>
@@ -217,6 +218,7 @@ const handleKeyDown = (e: any) => {
         </IonGrid>
       </IonContent>
     </IonPage>
+    </>
   );
 };
 

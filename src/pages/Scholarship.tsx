@@ -15,7 +15,8 @@ import {
   IonButton,
   IonIcon,
   IonInput,
-  IonBackButton
+  IonBackButton,
+  IonSearchbar
 } from '@ionic/react';
 import { arrowBackOutline, search } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
@@ -101,17 +102,26 @@ const Scholarship: React.FC = () => {
           <IonTitle>Scholarship Dashboard</IonTitle>
 
           <IonButtons slot="end">
-            <IonInput
-              placeholder="Search..."
-              value={searchText}
-              onIonInput={e => setSearchText(e.detail.value!)}
-              onKeyDown={handleKeyDown}
-              style={{ maxWidth: '200px', color: '#fff', marginRight: '5px' }}
-            />
-            <IonButton onClick={handleSearch}>
-              <IonIcon icon={search} />
-            </IonButton>
-          </IonButtons>
+  <IonSearchbar
+  value={searchText}
+  debounce={300}
+  placeholder="Search Student..."
+  onIonChange={(e) => setSearchText(e.detail.value!)}
+  onKeyDown={(e: any) => {
+    if (e.key === "Enter") {
+      const value = e.target.value;
+      if (!value.trim()) return;
+
+      history.push(`/students?query=${encodeURIComponent(value)}`);
+      setSearchText("");
+    }
+  }}
+  style={{
+    width: "260px",
+    "--border-radius": "10px"
+  }}
+/>
+</IonButtons>
 
         </IonToolbar>
       </IonHeader>

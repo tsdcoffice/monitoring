@@ -40,19 +40,15 @@ const Dashboard: React.FC = () => {
   const [genderStats, setGenderStats] = useState({ male: 0, female: 0 });
   const [barangayCounts, setBarangayCounts] = useState<number[]>([]);
 
-  // 🔥 Refresh data every time the Dashboard is about to enter view
   useIonViewWillEnter(() => {
     fetchDashboardData();
   });
 
   const fetchDashboardData = async () => {
-
-    // TOTAL STUDENTS
     const { count: studentCount } = await supabase
       .from('students')
       .select('*', { count: 'exact', head: true });
 
-    // TOTAL TRAINEES
     const { count: traineeCount } = await supabase
       .from('trainees')
       .select('*', { count: 'exact', head: true });
@@ -60,9 +56,6 @@ const Dashboard: React.FC = () => {
     setTotalStudents(studentCount || 0);
     setTotalTrainees(traineeCount || 0);
 
-    /* ==============================
-       GENDER COUNT (COMBINED)
-    ============================== */
     const { data: studentGender } = await supabase
       .from('students')
       .select('gender');
@@ -81,9 +74,6 @@ const Dashboard: React.FC = () => {
 
     setGenderStats({ male, female });
 
-    /* ==============================
-       BARANGAY COUNT
-    ============================== */
     const counts = new Array(barangays.length).fill(0);
 
     const { data: studentBarangay } = await supabase
@@ -101,6 +91,8 @@ const Dashboard: React.FC = () => {
 
     setBarangayCounts(counts);
   };
+
+  const totalPeople = totalStudents + totalTrainees;
 
   const barData = {
     labels: barangays,
@@ -161,7 +153,10 @@ const Dashboard: React.FC = () => {
                   </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  <IonProgressBar value={1} style={{ height: '8px' }} />
+                  <IonProgressBar 
+                    value={totalPeople > 0 ? totalStudents / totalPeople : 0} 
+                    style={{ height: '8px' }} 
+                  />
                 </IonCardContent>
               </IonCard>
             </IonCol>
@@ -175,7 +170,10 @@ const Dashboard: React.FC = () => {
                   </IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  <IonProgressBar value={1} style={{ height: '8px' }} />
+                  <IonProgressBar 
+                    value={totalPeople > 0 ? totalTrainees / totalPeople : 0} 
+                    style={{ height: '8px' }} 
+                  />
                 </IonCardContent>
               </IonCard>
             </IonCol>

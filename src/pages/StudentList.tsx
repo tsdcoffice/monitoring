@@ -17,7 +17,8 @@ import {
   IonPopover,
   IonList,
   IonItem,
-  IonLabel
+  IonLabel,
+  useIonViewWillEnter
 } from '@ionic/react';
 
 import {
@@ -34,6 +35,7 @@ import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+
 interface Student {
   id: string;
   firstname: string;
@@ -48,6 +50,7 @@ interface Student {
   ip_group: string | null;
   created_at: string;
   scholarship_types: { name: string } | null;
+  status: string | null;
 }
 
 const barangays = [
@@ -78,10 +81,15 @@ const StudentList: React.FC = () => {
   const [selectedIP, setSelectedIP] = useState('');
   const [selectedSchool, setSelectedSchool] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   useEffect(() => {
     fetchStudents();
   }, [typeQuery, searchQuery]);
+
+  useIonViewWillEnter(() => {
+  fetchStudents();
+});
 
   useEffect(() => {
     applyFilters();
@@ -93,6 +101,7 @@ const StudentList: React.FC = () => {
     selectedIP,
     selectedSchool,
     selectedCourse,
+    selectedStatus,
     sortOption
   ]);
 
@@ -157,6 +166,10 @@ const StudentList: React.FC = () => {
       data = data.filter(s => s.course === selectedCourse);
     }
 
+    if (selectedStatus) {
+      data = data.filter(s => (s.status || 'On-going') === selectedStatus);
+    }
+
     switch (sortOption) {
       case 'az':
         data.sort((a, b) => a.lastname.localeCompare(b.lastname));
@@ -186,12 +199,16 @@ const StudentList: React.FC = () => {
   };
 
   const resetFilters = () => {
-    setSearchText('');
-    setSelectedBarangay('');
-    setSelectedGender('');
-    setSortOption('az');
-    setShowFilter(false);
-  };
+  setSearchText('');
+  setSelectedBarangay('');
+  setSelectedGender('');
+  setSelectedIP('');
+  setSelectedSchool('');
+  setSelectedCourse('');
+  setSelectedStatus('');
+  setSortOption('az');
+  setShowFilter(false);
+};
 
   /* PRINT */
   const handlePrint = () => {
@@ -226,6 +243,7 @@ const StudentList: React.FC = () => {
               <th>Year</th>
               <th>IP</th>
               <th>Type</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -239,6 +257,18 @@ const StudentList: React.FC = () => {
                 <td>${s.year_level || '-'}</td>
                 <td>${s.is_ip ? 'IP' : 'Not IP'}</td>
                 <td>${s.scholarship_types?.name || '-'}</td>
+                <td style="
+  color: ${
+    (s.status || 'On-going') === 'Graduated'
+      ? 'green'
+      : (s.status || 'On-going') === 'Stopped'
+      ? 'red'
+      : 'gray'
+  };
+  font-weight: bold;
+">
+  ${s.status || 'On-going'}
+</td>
               </tr>
             `).join('')}
           </tbody>
@@ -259,18 +289,60 @@ const StudentList: React.FC = () => {
       s.course || '-',
       s.year_level || '-',
       s.is_ip ? 'IP' : 'Not IP',
-      s.scholarship_types?.name || '-'
+      s.scholarship_types?.name || '-' ,
+      s.status || 'On-going'
     ]);
 
     autoTable(doc, {
-      head: [['Barangay','Name','Gender','School','Course','Year','IP','Type']],
-      body: tableData,
-      startY: 20,
-      styles: { fontSize: 8 }
-    });
+  head: [['Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
+  body: tableData,
+  startY: 20,
+  styles: { fontSize: 8 },
+
+  didParseCell: function (data) {
+
+    if (data.column.index === 8) { // Status column
+
+      const status = data.cell.raw;
+
+      if (status === 'Graduated') {
+        data.cell.styles.textColor = [0, 128, 0]; // green
+      }
+
+      if (status === 'Stopped') {
+        data.cell.styles.textColor = [200, 0, 0]; // red
+      }
+
+      if (status === 'On-going') {
+        data.cell.styles.textColor = [120, 120, 120]; // gray
+      }
+
+      data.cell.styles.fontStyle = 'bold';
+    }
+  }
+});
 
     doc.save('scholarship_student_list.pdf');
   };
+
+    const getStatusColor = (status: string | null) => {
+      if (status === 'Graduated') return 'success';
+      if (status === 'Stopped') return 'danger';
+      return 'medium'; // On-going
+    };
+
+    const getRowColor = (status: string | null) => {
+
+  if (status === 'Graduated') return '#d4edda'; // green
+
+  if (status === 'Stopped') return '#f8d7da'; // red
+
+  return ''; // ongoing
+};
+
+    const handleUpdate = (studentId: string) => {
+      history.push(`/update-student/${studentId}`);
+    };
 
   return (
     <IonPage>
@@ -362,6 +434,7 @@ const StudentList: React.FC = () => {
                 <IonSelectOption value="ip">IP</IonSelectOption>
                 <IonSelectOption value="school">School</IonSelectOption>
                 <IonSelectOption value="course">Course</IonSelectOption>
+                <IonSelectOption value="status">Status</IonSelectOption>
               </IonSelect>
             </IonItem>
 
@@ -439,6 +512,24 @@ const StudentList: React.FC = () => {
 </IonItem>
 )}
 
+{filterType === 'status' && (
+<IonItem>
+  <IonLabel position="stacked">Student Status</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedStatus}
+    onIonChange={e => {
+      setSelectedStatus(e.detail.value);
+      setShowFilter(false);
+    }}
+  >
+    <IonSelectOption value="On-going">On-going</IonSelectOption>
+    <IonSelectOption value="Graduated">Graduated</IonSelectOption>
+    <IonSelectOption value="Stopped">Stopped</IonSelectOption>
+  </IonSelect>
+</IonItem>
+)}
+
             <div style={{ display:'flex', gap:'8px', marginTop:'10px' }}>
               <IonButton expand="block" color="medium" onClick={resetFilters}>
                 Reset
@@ -466,10 +557,14 @@ const StudentList: React.FC = () => {
             <IonCol>Year</IonCol>
             <IonCol>IP</IonCol>
             <IonCol>Type</IonCol>
+            <IonCol>Status</IonCol>
+            <IonCol>Action</IonCol>
           </IonRow>
 
           {filteredStudents.map(student => (
-            <IonRow key={student.id}>
+            <IonRow key={student.id}
+              style={{ backgroundColor: getRowColor(student.status) }}
+            >
               <IonCol>{student.barangay}</IonCol>
               <IonCol>{student.lastname}, {student.firstname}</IonCol>
               <IonCol>{student.gender}</IonCol>
@@ -478,6 +573,23 @@ const StudentList: React.FC = () => {
               <IonCol>{student.year_level || '-'}</IonCol>
               <IonCol>{student.is_ip ? 'IP' : 'Not IP'}</IonCol>
               <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
+              {/* STATUS COLUMN */}
+              <IonCol>
+      <IonText color={getStatusColor(student.status)}>
+        {student.status || 'On-going'}
+      </IonText>
+    </IonCol>
+
+    {/* UPDATE BUTTON */}
+    <IonCol>
+      <IonButton
+        size="small"
+        color="primary"
+        onClick={() => handleUpdate(student.id)}
+      >
+        Update
+      </IonButton>
+    </IonCol>
             </IonRow>
           ))}
 
