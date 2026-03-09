@@ -34,6 +34,9 @@ import { supabase } from '../supabaseClient';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from "xlsx";
+import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
+import { saveAs } from "file-saver";
 
 
 interface Student {
@@ -86,6 +89,7 @@ const StudentList: React.FC = () => {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [bulkYear, setBulkYear] = useState('');
   const [showSelect, setShowSelect] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
   
 
   useEffect(() => {
@@ -412,6 +416,113 @@ const handleBulkUpdate = async () => {
   fetchStudents();
 };
 
+   const downloadExcel = () => {
+
+  const data = filteredStudents.map(s => ({
+    Barangay: s.barangay,
+    Name: `${s.lastname}, ${s.firstname}`,
+    Gender: s.gender,
+    School: s.school,
+    Course: s.course || "-",
+    Year: s.year_level || "-",
+    IP: s.is_ip ? "IP" : "Not IP",
+    Type: s.scholarship_types?.name || "-",
+    Status: s.status || "On-going"
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // Auto column width
+  worksheet["!cols"] = [
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 10 },
+    { wch: 25 },
+    { wch: 20 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 20 },
+    { wch: 15 }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array"
+  });
+
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+
+  saveAs(blob, "Scholarship_Students.xlsx");
+
+  setShowDownload(false);
+};
+
+  const downloadWord = async () => {
+
+  const rows = [
+
+    // HEADER
+    new TableRow({
+      children: [
+        new TableCell({children:[new Paragraph("Barangay")]}),
+        new TableCell({children:[new Paragraph("Name")]}),
+        new TableCell({children:[new Paragraph("Gender")]}),
+        new TableCell({children:[new Paragraph("School")]}),
+        new TableCell({children:[new Paragraph("Course")]}),
+        new TableCell({children:[new Paragraph("Year")]}),
+        new TableCell({children:[new Paragraph("IP")]}),
+        new TableCell({children:[new Paragraph("Type")]}),
+        new TableCell({children:[new Paragraph("Status")]})
+      ]
+    }),
+
+    ...filteredStudents.map(s =>
+      new TableRow({
+        children: [
+          new TableCell({children:[new Paragraph(s.barangay)]}),
+          new TableCell({children:[new Paragraph(`${s.lastname}, ${s.firstname}`)]}),
+          new TableCell({children:[new Paragraph(s.gender)]}),
+          new TableCell({children:[new Paragraph(s.school)]}),
+          new TableCell({children:[new Paragraph(s.course || "-")]}),
+          new TableCell({children:[new Paragraph(s.year_level || "-")]}),
+          new TableCell({children:[new Paragraph(s.is_ip ? "IP" : "Not IP")]}),
+          new TableCell({children:[new Paragraph(s.scholarship_types?.name || "-")]}),
+          new TableCell({children:[new Paragraph(s.status || "On-going")]})
+        ]
+      })
+    )
+  ];
+
+  const doc = new Document({
+    sections: [
+      {
+        children: [
+
+          new Paragraph({
+            text: "Scholarship Student List",
+            heading: "Heading1"
+          }),
+
+          new Paragraph(" "),
+
+          new Table({
+            rows
+          })
+        ]
+      }
+    ]
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  saveAs(blob, "Scholarship_Students.docx");
+
+  setShowDownload(false);
+};
+
   return (
     <IonPage>
 
@@ -437,9 +548,9 @@ const handleBulkUpdate = async () => {
             <IonButton fill="clear" onClick={handlePrint}>
               <IonIcon icon={printOutline}/>
             </IonButton>
-            <IonButton fill="clear" onClick={handleDownloadPDF}>
-              <IonIcon icon={downloadOutline}/>
-            </IonButton>
+          <IonButton fill="clear" onClick={() => setShowDownload(true)}>
+  <IonIcon icon={downloadOutline}/>
+</IonButton>
           </div>
 
           <div style={{display:'flex',gap:'8px'}}>
@@ -775,6 +886,26 @@ const handleBulkUpdate = async () => {
         </IonGrid>
 
       </IonContent>
+      <IonPopover
+  isOpen={showDownload}
+  onDidDismiss={() => setShowDownload(false)}
+>
+  <IonList style={{minWidth:'200px'}}>
+
+    <IonItem button onClick={downloadExcel}>
+      <IonLabel>Download as Excel</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={handleDownloadPDF}>
+      <IonLabel>Download as PDF</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={downloadWord}>
+      <IonLabel>Download as Word</IonLabel>
+    </IonItem>
+
+  </IonList>
+</IonPopover>
     </IonPage>
   );
 };
