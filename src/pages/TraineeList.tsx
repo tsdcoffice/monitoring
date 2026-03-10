@@ -43,7 +43,7 @@ interface TrainingType {
 
 const courseSlugMap: { [slug: string]: string } = {
   "barista": "Barista",
-  "barangay-health": "Barangay Health Services NCII",
+  "barangay-health": "Barangay Health Services NC II",
   "bayong-making": "Bayong Making",
   "beauty-care": "Beauty Care (Nail Care, Hair and Make-up)",
   "bread-pastry": "Bread and Pastry Production",
@@ -63,7 +63,7 @@ const courseSlugMap: { [slug: string]: string } = {
   "plumbing": "Plumbing",
   "pineapple-processing": "Pineapple Processing",
   "scaffolding": "Scaffolding",
-  "security-nc2": "Security Services NCII",
+  "security-nc2": "Security Services NC II",
   "smaw-nc1": "Shielded Metal Arc Welding(SMAW) NC I",
   "smaw-nc2": "Shielded Metal Arc Welding(SMAW) NC II"
 };
@@ -78,7 +78,7 @@ const barangays = [
 
 const TraineeList: React.FC = () => {
 
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, batch } = useParams<{ slug: string, batch?: string }>();
   const history = useHistory();
 
   const location = useLocation();
@@ -152,6 +152,10 @@ const TraineeList: React.FC = () => {
           return;
         }
           query = query.eq('training_type_id', typeData.id);
+
+            if(batch){
+              query = query.eq("batch", batch)
+            }
         
 
       }

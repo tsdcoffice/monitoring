@@ -33,19 +33,19 @@ interface Course {
 // Courses in alphabetical order
 const courses: Course[] = [
   { name: "Barista", slug: "barista" },
-  { name: "Barangay Health Services NCII", slug: "barangay-health" },
+  { name: "Barangay Health Services NC II", slug: "barangay-health" },
   { name: "Bayong Making", slug: "bayong-making" },
   { name: "Beauty Care (Nail Care, Hair and Make-up)", slug: "beauty-care" },
   { name: "Bread and Pastry Production", slug: "bread-pastry" },
   { name: "Bookkeeping NC III", slug: "bookkeeping-nc3" },
   { name: "Community Nutrition Services", slug: "community-nutrition" },
   { name: "Cookery", slug: "cookery" },
-  { name: "Driving NCII", slug: "driving-nc2" },
-  { name: "Dressmaking NCII", slug: "dressmaking-nc2" },
+  { name: "Driving NC II", slug: "driving-nc2" },
+  { name: "Dressmaking NC II", slug: "dressmaking-nc2" },
   { name: "Electrical Installation and Maintenance NC II", slug: "electrical-nc2" },
-  { name: "Emergency Medical Services NCII", slug: "emergency-medical" },
+  { name: "Emergency Medical Services NC II", slug: "emergency-medical" },
   { name: "Food Processing", slug: "food-processing" },
-  { name: "Garbage Collection NCII", slug: "garbage-collection" },
+  { name: "Garbage Collection NC II", slug: "garbage-collection" },
   { name: "Housekeeping NC II", slug: "housekeeping-nc2" },
   { name: "Masonry and Hallow Blocks", slug: "masonry-hallow" },
   { name: "Massage Therapy", slug: "massage-therapy" },
@@ -97,9 +97,14 @@ const Training: React.FC = () => {
   };
 
   const goToTrainees = (slug: string) => {
-    const route = slug === 'all' ? '/trainees/all' : `/trainees/${slug}`;
-    history.push(route);
-  };
+
+  if(slug === "all"){
+    history.push("/trainees/all")
+  }else{
+    history.push(`/batch/${slug}`)
+  }
+
+};
 
   const handleSearch = () => {
   if (!searchText.trim()) return;

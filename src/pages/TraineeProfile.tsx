@@ -38,13 +38,13 @@ const TraineeProfile: React.FC = () => {
   ];
 
   const trainings = [
-    "Barista","Barangay Health Services NCII","Bayong Making",
+    "Barista","Barangay Health Services NC II","Bayong Making",
     "Beauty Care (Nail Care, Hair and Make-up)","Bookkeeping NC III",
     "Bread and Pastry Production","Community Nutrition Services",
-    "Cookery","Dressmaking NCII","Driving NCII",
+    "Cookery","Dressmaking NC II","Driving NC II",
     "Electrical Installation and Maintenance NC II",
-    "Emergency Medical Services NCII","Food Processing",
-    "Garbage Collection NCII","Housekeeping NC II",
+    "Emergency Medical Services NC II","Food Processing",
+    "Garbage Collection NC II","Housekeeping NC II",
     "Masonry and Hallow Blocks","Massage Therapy",
     "Organic Agriculture NC II","Pineapple Processing",
     "Plumbing","Scaffolding","Security Services NC II",
@@ -68,7 +68,8 @@ const TraineeProfile: React.FC = () => {
     is_ip: false,
     ip_group: '',
     educational_attainment: '',
-    course: ''
+    course: '',
+    batch: ''
   };
 
   const [formData, setFormData] = useState(initialFormState);
@@ -104,7 +105,8 @@ const TraineeProfile: React.FC = () => {
       !formData.gender ||
       !formData.barangay ||
       !formData.educational_attainment ||
-      !formData.course
+      !formData.course ||
+      !formData.batch
     ) {
       alert("Please fill in all required fields.");
       return;
@@ -136,7 +138,8 @@ const TraineeProfile: React.FC = () => {
         is_ip: formData.is_ip,
         ip_group: formData.is_ip ? formData.ip_group : null,
         educational_attainment: formData.educational_attainment,
-        training_type_id: trainingData.id
+        training_type_id: trainingData.id,
+        batch: formData.batch
       }
     ]);
 
@@ -294,6 +297,31 @@ const TraineeProfile: React.FC = () => {
       </IonSelectOption>
     ))}
   </IonSelect>
+</IonItem>
+
+<IonItem>
+  <IonLabel position="stacked">Batch *</IonLabel>
+  <IonInput
+    type="number"
+    min="1"
+    max="1000"
+    placeholder="Enter Batch Number"
+    value={formData.batch}
+    onIonChange={e => {
+      const value = e.detail.value;
+
+      if (!value) {
+        handleChange('batch', '');
+        return;
+      }
+
+      const num = parseInt(value);
+
+      if (num >= 1 && num <= 1000) {
+        handleChange('batch', num);
+      }
+    }}
+  />
 </IonItem>
 
         <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
