@@ -10,6 +10,10 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
+import * as XLSX from "xlsx";
+import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType } from "docx";
+import { saveAs } from "file-saver";
+import headerImg from "../pics/header.png";
 
 import {
   printOutline,
@@ -46,16 +50,16 @@ const courseSlugMap: { [slug: string]: string } = {
   "bookkeeping-nc3": "Bookkeeping NC III",
   "community-nutrition": "Community Nutrition Services",
   "cookery": "Cookery",
-  "driving-nc2": "Driving NCII",
-  "dressmaking-nc2": "Dressmaking NCII",
+  "driving-nc2": "Driving NC II",
+  "dressmaking-nc2": "Dressmaking NC II",
   "electrical-nc2": "Electrical Installation and Maintenance NC II",
-  "emergency-medical": "Emergency Medical Services NCII",
+  "emergency-medical": "Emergency Medical Services NC II",
   "food-processing": "Food Processing",
-  "garbage-collection": "Garbage Collection NCII",
+  "garbage-collection": "Garbage Collection NC II",
   "housekeeping-nc2": "Housekeeping NC II",
   "masonry-hallow": "Masonry and Hallow Blocks",
   "massage-therapy": "Massage Therapy",
-  "organic-nc2": "Organic agriculture NCII",
+  "organic-nc2": "Organic agriculture NC II",
   "plumbing": "Plumbing",
   "pineapple-processing": "Pineapple Processing",
   "scaffolding": "Scaffolding",
@@ -95,6 +99,7 @@ const TraineeList: React.FC = () => {
 
   const [sortOption, setSortOption] = useState('date_desc');
   const [showFilter, setShowFilter] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -210,20 +215,24 @@ const handlePrint = () => {
   const printWindow = window.open('', '', 'width=900,height=700');
   if (!printWindow) return;
 
+  // 1. Isuwat ang content (apil ang image)
   printWindow.document.write(`
     <html>
       <head>
         <title>TSDC Trainee List</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { text-align: center; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
-          th { background: #f2f2f2; }
+          h2 { text-align:center; margin-top:10px; }
+          .generated { text-align:center; font-size:12px; margin-bottom:15px; }
+          table { width:100%; border-collapse:collapse; }
+          th, td { border:1px solid #333; padding:6px; font-size:12px; text-align:center; }
+          th { background:#10377a; color:white; }
         </style>
       </head>
       <body>
+        <img id="print-header" src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
         <h2>TSDC Trainee List</h2>
+        <div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
         <table>
           ${generateTableRows()}
         </table>
@@ -233,17 +242,44 @@ const handlePrint = () => {
 
   printWindow.document.close();
   printWindow.focus();
-  printWindow.print();
+
+  // 2. KINI ANG IMPORTANTE:
+  // Maghulat ta nga ma-load ang image sa dili pa i-print
+  const header = printWindow.document.getElementById('print-header') as HTMLImageElement;
+  
+  if (header) {
+    header.onload = () => {
+      printWindow.print();
+      // printWindow.close(); // Optional: i-close ang window after print/cancel
+    };
+
+    // Para sa mga browser nga paspas kaayo o naka-cache na ang image
+    if (header.complete) {
+      header.onload(new Event('load'));
+    }
+  } else {
+    // Backup kung pananglitan naay error sa image
+    printWindow.print();
+  }
 };
 
   /* PDF DOWNLOAD */
 const handleDownloadPDF = () => {
   const pdf = new jsPDF('p', 'mm', 'a4');
 
-  pdf.setFontSize(14);
-  pdf.text('TSDC Trainee List', 105, 15, { align: 'center' });
+  const img = new Image();
+  img.src = headerImg;
+
+pdf.addImage(img, "PNG", 10, 5, 190, 30);
+
+  pdf.setFontSize(16);
+pdf.text('TSDC Trainee List', 105, 40, { align: 'center' });
+
+pdf.setFontSize(10);
+pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
 
   const tableColumn = [
+    "No.",
     "Barangay",
     "Name",
     "Gender",
@@ -253,7 +289,8 @@ const handleDownloadPDF = () => {
     "Training Type"
   ];
 
-  const tableRows = trainees.map(t => [
+  const tableRows = trainees.map((t, index) => [
+    index + 1,
     t.barangay,
     `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
     t.gender,
@@ -264,18 +301,39 @@ const handleDownloadPDF = () => {
   ]);
 
   autoTable(pdf, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: 20,
-    styles: { fontSize: 8 }
-  });
+  head: [tableColumn],
+  body: tableRows,
+  startY: 50,
+  showHead: "everyPage",
+
+  
+
+  styles: {
+    fontSize:8,
+    halign:'center',
+    valign:'middle'
+  },
+
+  headStyles:{
+    fillColor:[16,55,122],
+    textColor:255,
+    fontStyle:'bold',
+    halign:'center'
+  },
+
+  alternateRowStyles:{
+    fillColor:[245,245,245]
+  }
+});
 
   pdf.save('tsdc_trainee_list.pdf');
 };
 
 const generateTableRows = () => {
   const header = `
-    <tr>
+      <thead>
+      <tr>
+      <th>No.</th>
       <th>Barangay</th>
       <th>Name</th>
       <th>Gender</th>
@@ -284,10 +342,13 @@ const generateTableRows = () => {
       <th>Date</th>
       <th>Training Type</th>
     </tr>
+    </thead>
+    <tbody>
   `;
 
-  const rows = trainees.map(t => `
+  const rows = trainees.map((t, index) => `
     <tr>
+      <td>${index + 1}</td>
       <td>${t.barangay}</td>
       <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
       <td>${t.gender}</td>
@@ -298,14 +359,185 @@ const generateTableRows = () => {
     </tr>
   `).join('');
 
-  return header + rows;
+  return header + rows + "</tbody>";
+};
+
+   const downloadExcel = () => {
+
+  const data = trainees.map((t, index) => ({
+  "No.": index + 1,
+    Barangay: t.barangay,
+    Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
+    Gender: t.gender,
+    Education: t.educational_attainment,
+    IP: t.is_ip ? "IP" : "Not IP",
+    Date: new Date(t.created_at).toLocaleDateString(),
+    "Training Type": trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ""
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet([]);
+
+XLSX.utils.sheet_add_aoa(
+  worksheet,
+  [
+    ["TSDC Trainee List"],
+    [`Generated: ${new Date().toLocaleDateString()}`],
+    []
+  ],
+  { origin: "A1" }
+);
+
+XLSX.utils.sheet_add_json(
+  worksheet,
+  data,
+  { origin: "A4" }
+);
+
+  const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
+
+XLSX.utils.sheet_add_aoa(
+  worksheet,
+  [headerRow],
+  { origin: "A4" }
+);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array"
+  });
+
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+
+  saveAs(blob, "tsdc_trainee_list.xlsx");
+
+  setShowDownload(false);
+};
+
+  const downloadWord = async () => {
+    const generatedDate = new Date().toLocaleDateString();
+
+  const rows = [
+
+    new TableRow({
+  tableHeader: true,
+  children: [
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("No.")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Barangay")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Name")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Gender")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Education")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("IP")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Date")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Training Type")]
+    })
+
+  ]
+}),
+
+    ...trainees.map((t, index) =>
+  new TableRow({
+    children: [
+      new TableCell({children:[new Paragraph(String(index + 1))]}),
+      new TableCell({children:[new Paragraph(t.barangay)]}),
+      new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
+      new TableCell({children:[new Paragraph(t.gender)]}),
+      new TableCell({children:[new Paragraph(t.educational_attainment)]}),
+      new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
+      new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
+      new TableCell({children:[new Paragraph(trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "")]})
+    ]
+  })
+)
+  ];
+
+  const doc = new Document({
+    sections: [{
+      children: [
+
+  new Paragraph({
+    children: [
+      new ImageRun({
+        data: await fetch(headerImg).then(r => r.arrayBuffer()),
+        transformation: {
+          width: 500,
+          height: 100
+        },
+        type: "png"
+      })
+    ]
+  }),
+
+  new Paragraph({
+  text: "TSDC Trainee List",
+  heading: HeadingLevel.HEADING_1,
+  alignment: AlignmentType.CENTER
+}),
+
+new Paragraph({
+  text: `Generated: ${generatedDate}`,
+  alignment: AlignmentType.CENTER
+}),
+
+new Paragraph(" "),
+
+  new Table({
+  rows,
+  width: {
+    size: 100,
+    type: "pct"
+  }
+})
+
+]
+    }]
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  saveAs(blob, "tsdc_trainee_list.docx");
+
+  setShowDownload(false);
 };
 
   return (
     <IonPage>
 
       <IonHeader>
-        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
+        <IonToolbar color="primary">
           <IonButtons slot="start">
               <IonButton
                 fill="clear"
@@ -319,8 +551,8 @@ const generateTableRows = () => {
           </IonButtons>
           <IonTitle>
             {slug === 'all' || !slug
-              ? 'ALL TRAINEES'
-              : `${slug.replace(/-/g,' ').toUpperCase()} TRAINEES`}
+              ? 'All Trainees'
+              : `${slug.replace(/-/g,' ').toUpperCase()} Trainees`}
           </IonTitle>
         </IonToolbar>
       </IonHeader>
@@ -332,9 +564,9 @@ const generateTableRows = () => {
             <IonButton fill="clear" onClick={handlePrint}>
               <IonIcon icon={printOutline}/>
             </IonButton>
-            <IonButton fill="clear" onClick={handleDownloadPDF}>
-              <IonIcon icon={downloadOutline}/>
-            </IonButton>
+            <IonButton fill="clear" onClick={() => setShowDownload(true)}>
+  <IonIcon icon={downloadOutline}/>
+</IonButton>
           </div>
 
           <div style={{display:'flex',gap:'8px'}}>
@@ -427,8 +659,11 @@ const generateTableRows = () => {
             <IonRow style={{
               fontWeight:'bold',
               borderBottom:'2px solid #333',
-              background:'#f2f2f2'
+              background:'#10377a',
+              color:'white',
+              textAlign:'center'
             }}>
+              <IonCol size="1">No.</IonCol>
               <IonCol>Barangay</IonCol>
               <IonCol>Name</IonCol>
               <IonCol>Gender</IonCol>
@@ -438,8 +673,9 @@ const generateTableRows = () => {
               <IonCol>Training Type</IonCol>
             </IonRow>
 
-            {trainees.map(t => (
+            {trainees.map((t, index) => (
               <IonRow key={t.id}>
+                <IonCol size="1">{index + 1}</IonCol>
                 <IonCol>{t.barangay}</IonCol>
                 <IonCol>
                   {t.lastname}, {t.firstname} {t.middlename || ''}
@@ -459,10 +695,29 @@ const generateTableRows = () => {
         </div>
 
       </IonContent>
+      <IonPopover
+  isOpen={showDownload}
+  onDidDismiss={() => setShowDownload(false)}
+>
+  <IonList style={{minWidth:'200px'}}>
+
+    <IonItem button onClick={downloadExcel}>
+      <IonLabel>Download as Excel</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={handleDownloadPDF}>
+      <IonLabel>Download as PDF</IonLabel>
+    </IonItem>
+
+    <IonItem button onClick={downloadWord}>
+      <IonLabel>Download as Word</IonLabel>
+    </IonItem>
+
+  </IonList>
+</IonPopover>
     </IonPage>
   );
 };
 
 export default TraineeList;
-
 
