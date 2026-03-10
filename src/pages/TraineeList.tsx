@@ -537,7 +537,7 @@ new Paragraph(" "),
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
               <IonButton
                 fill="clear"
