@@ -34,7 +34,7 @@ import { supabase } from '../supabaseClient';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";

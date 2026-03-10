@@ -1,3 +1,4 @@
+declare module 'xlsx-js-style';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonGrid, IonRow, IonCol, IonText, IonButton, IonIcon,
@@ -10,7 +11,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
@@ -506,18 +507,58 @@ XLSX.utils.sheet_add_aoa(
     ["TSDC Trainee List"],
     [`Generated: ${new Date().toLocaleDateString()}`],
     [],
+    
     ...(batchDetails ? [
-      [`Batch: ${batchDetails.batch}`],
-      [`Start Date: ${batchDetails.start_date}`],
-      [`End Date: ${batchDetails.end_date}`],
-      [`Duration: ${batchDetails.duration_hours} hrs`],
-      [`Trainor: ${batchDetails.trainor}`],
-      [`Venue: ${batchDetails.venue}`],
-      []
-    ] : [])
+  [
+    `Batch: ${batchDetails.batch}`,
+    "",
+    `Start Date: ${batchDetails.start_date}`,
+    "",
+    "",
+    `End Date: ${batchDetails.end_date}`
+  ],
+  [
+    `Duration: ${batchDetails.duration_hours} hrs`,
+    "",
+    `Trainor: ${batchDetails.trainor}`,
+    "",
+    "",
+    `Venue: ${batchDetails.venue}`
+  ],
+  []
+] : [])
   ],
   { origin: "A1" }
 );
+
+worksheet["!merges"] = [
+
+  // TITLE
+  { s:{r:0,c:0}, e:{r:0,c:7} },
+
+  // GENERATED
+  { s:{r:1,c:0}, e:{r:1,c:7} },
+
+  // BATCH / START / END
+  { s:{r:3,c:0}, e:{r:3,c:1} },
+  { s:{r:3,c:2}, e:{r:3,c:4} },
+  { s:{r:3,c:5}, e:{r:3,c:7} },
+
+  // DURATION / TRAINOR / VENUE
+  { s:{r:4,c:0}, e:{r:4,c:1} },
+  { s:{r:4,c:2}, e:{r:4,c:4} },
+  { s:{r:4,c:5}, e:{r:4,c:7} }
+
+];
+
+worksheet["A1"].s = {
+  font:{ bold:true, sz:16 },
+  alignment:{ horizontal:"center", vertical:"center" }
+};
+
+worksheet["A2"].s = {
+  alignment:{ horizontal:"center", vertical:"center" }
+};
 
 // Header row
 const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
@@ -525,14 +566,14 @@ const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date
 XLSX.utils.sheet_add_aoa(
   worksheet,
   [headerRow],
-  { origin: "A10" }
+  { origin: "A6" }
 );
 
 // Add data rows
 XLSX.utils.sheet_add_json(
   worksheet,
   data,
-  { origin: "A11", skipHeader: true }
+  { origin: "A7", skipHeader: true }
 );
 
 // Style header cells
@@ -543,7 +584,7 @@ const headerStyle = {
 };
 
 for (let C = 0; C < headerRow.length; C++) {
-  const cellAddress = XLSX.utils.encode_cell({ r: 9, c: C }); // row 10
+  const cellAddress = XLSX.utils.encode_cell({ r: 5, c: C }); // row 10
   if (!worksheet[cellAddress]) continue;
   worksheet[cellAddress].s = headerStyle;
 }
