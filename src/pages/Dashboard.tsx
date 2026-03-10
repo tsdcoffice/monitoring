@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
     datasets: [{
       label: 'Total',
       data: barangayCounts,
-      backgroundColor: 'rgba(56,128,255,0.7)',
+      backgroundColor: 'rgba(33, 107, 234, 0.87)',
       borderRadius: 5,
     }]
   };
@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
                 <IonCardContent>
                   <IonProgressBar
                     value={totalPeople > 0 ? totalStudents / totalPeople : 0}
-                    style={{ height: '8px' }}
+                    style={{ height: '8px', '--progress-background': '#10377a' }}
                   />
                 </IonCardContent>
               </IonCard>
@@ -146,7 +146,7 @@ const Dashboard: React.FC = () => {
                 <IonCardContent>
                   <IonProgressBar
                     value={totalPeople > 0 ? totalTrainees / totalPeople : 0}
-                    style={{ height: '8px' }}
+                    style={{ height: '8px', '--progress-background': '#d68718' }}
                   />
                 </IonCardContent>
               </IonCard>

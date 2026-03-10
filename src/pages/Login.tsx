@@ -18,6 +18,7 @@ import { useHistory } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
 import tesdaLogo from "../pics/tesda-logo.jfif";
+import bgImage from "../pics/tsdc.jpg"; 
 
 const Login: React.FC = () => {
   const history = useHistory();
@@ -102,17 +103,22 @@ const handleForgotPassword = async () => {
             justifyContent: "center",
             alignItems: "center",
             height: "100vh",
-            backgroundColor: "#0038A8"
-          }}
-        >
-          <IonCard
-            style={{
-              width: "100%",
-              maxWidth: "520px",
-              padding: "40px",
-              borderRadius: "20px",
-              boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
-              animation: "fadeIn 0.8s ease-in-out"
+            
+            backgroundImage: `linear-gradient(rgba(0, 20, 60, 0.89), rgba(2, 44, 129, 0.97)), url(${bgImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat"
+            }}
+          >
+        <IonCard
+          style={{
+            width: "90%", 
+            maxWidth: "450px", 
+            padding: "30px",
+            borderRadius: "15px",
+            backgroundColor: "#ffffff",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.5)", // Mas lawom nga shadow
+            animation: "fadeIn 0.8s ease-in-out"
             }}
           >
             <IonCardContent>
@@ -133,7 +139,7 @@ const handleForgotPassword = async () => {
                   color: "#0038A8"
                 }}
               >
-                TSDC Monitoring System
+                TSDC MONITORING SYSTEM
               </h1>
 
               <p
@@ -204,8 +210,12 @@ const handleForgotPassword = async () => {
                 onClick={handleLogin}
                 disabled={loading}
                 style={{
-                  height: "45px",
-                  fontWeight: "bold"
+                  height: "50px",
+                  marginTop: "20px",
+                  fontWeight: "700",
+                  "--background": "#10377a", // ✅ TESDA Deep Blue
+                  "--border-radius": "12px",
+   
                 }}
               >
                 {loading ? <IonSpinner name="crescent" /> : "Login"}

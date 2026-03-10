@@ -47,7 +47,7 @@ const TraineeProfile: React.FC = () => {
     "Garbage Collection NCII","Housekeeping NC II",
     "Masonry and Hallow Blocks","Massage Therapy",
     "Organic Agriculture NC II","Pineapple Processing",
-    "Plumbing","Scaffolding","Security Services NCII",
+    "Plumbing","Scaffolding","Security Services NC II",
     "Shielded Metal Arc Welding(SMAW) NC I",
     "Shielded Metal Arc Welding(SMAW) NC II"
   ];

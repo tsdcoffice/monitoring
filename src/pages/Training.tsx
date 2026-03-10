@@ -17,7 +17,8 @@ import {
   IonButton,
   IonIcon,
   IonInput,
-  IonSearchbar
+  IonSearchbar,
+  useIonViewWillEnter
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -39,20 +40,20 @@ const courses: Course[] = [
   { name: "Bookkeeping NC III", slug: "bookkeeping-nc3" },
   { name: "Community Nutrition Services", slug: "community-nutrition" },
   { name: "Cookery", slug: "cookery" },
-  { name: "Driving NC II", slug: "driving-nc2" },
-  { name: "Dressmaking NC II", slug: "dressmaking-nc2" },
+  { name: "Driving NCII", slug: "driving-nc2" },
+  { name: "Dressmaking NCII", slug: "dressmaking-nc2" },
   { name: "Electrical Installation and Maintenance NC II", slug: "electrical-nc2" },
-  { name: "Emergency Medical Services NC II", slug: "emergency-medical" },
+  { name: "Emergency Medical Services NCII", slug: "emergency-medical" },
   { name: "Food Processing", slug: "food-processing" },
-  { name: "Garbage Collection NC II", slug: "garbage-collection" },
+  { name: "Garbage Collection NCII", slug: "garbage-collection" },
   { name: "Housekeeping NC II", slug: "housekeeping-nc2" },
   { name: "Masonry and Hallow Blocks", slug: "masonry-hallow" },
   { name: "Massage Therapy", slug: "massage-therapy" },
-  { name: "Organic agriculture NC II", slug: "organic-nc2" },
+  { name: "Organic Agriculture NC II", slug: "organic-nc2" },
   { name: "Plumbing", slug: "plumbing" },
   { name: "Pineapple Processing", slug: "pineapple-processing" },
   { name: "Scaffolding", slug: "scaffolding" },
-  { name: "Security Services NCII", slug: "security-nc2" },
+  { name: "Security Services NC II", slug: "security-nc2" },
   { name: "Shielded Metal Arc Welding(SMAW) NC I", slug: "smaw-nc1" },
   { name: "Shielded Metal Arc Welding(SMAW) NC II", slug: "smaw-nc2" },
 ];
@@ -63,7 +64,7 @@ const Training: React.FC = () => {
   const [totalTrainees, setTotalTrainees] = useState(0);
    const [searchText, setSearchText] = useState('');
 
-  useEffect(() => {
+  useIonViewWillEnter(() => {
     fetchCounts();
   }, []);
 
@@ -167,7 +168,11 @@ const handleKeyDown = (e: any) => {
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                     borderLeft: '5px solid #d68718', // Gamay ra kaayo nga orange sa kilid
                     margin: '10px',
-                    textAlign: 'center' // Mas professional ang left-aligned sa dashboard
+                    textAlign: 'center', 
+                    height: '150px',            
+                    display: 'flex',            // Para ma-center ang content verticaly
+                    flexDirection: 'column',    // Vertical arrangement
+                    justifyContent: 'center'
                     }}
                   onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
                   onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}

@@ -16,7 +16,8 @@ import {
   IonIcon,
   IonInput,
   IonBackButton,
-  IonSearchbar
+  IonSearchbar,
+  
 } from '@ionic/react';
 import { arrowBackOutline, search } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
@@ -35,9 +36,26 @@ const Scholarship: React.FC = () => {
   const [counts, setCounts] = useState<{ [key: string]: number }>({});
   const [searchText, setSearchText] = useState('');
 
+  
   useEffect(() => {
-    fetchScholarshipData();
-  }, []);
+  fetchScholarshipData();
+
+  // Maminaw sa bisan unsang INSERT sa 'students' table
+  const channel = supabase
+    .channel('schema-db-changes')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'students' },
+      () => {
+        fetchScholarshipData(); // I-refresh ang counts kung naay bag-ong na-add
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   const fetchScholarshipData = async () => {
 
@@ -136,36 +154,36 @@ const Scholarship: React.FC = () => {
               <IonCol size="12" sizeMd="4" key={type.id}>
                 <IonCard
                   button
-                  onClick={() => goToStudents()}
+                  onClick={() => goToStudents(type.name)} 
                     style={{
-                    backgroundColor: '#10377a',
-                    color: '#ffffff',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                    borderLeft: '5px solid #d68718', // Gamay ra kaayo nga orange sa kilid
-                    margin: '10px',
-                    textAlign: 'center' // Mas professional ang left-aligned sa dashboard
-                    }}
-                >
-                  <IonCardHeader>
-                    <IonCardTitle
-                      style={{
+                      backgroundColor: '#10377a',
+                      color: '#ffffff',
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      borderLeft: '5px solid #d68718',
+                      margin: '10px',
+                      textAlign: 'center'
+                      }}
+                      >
+                <IonCardHeader>
+                  <IonCardTitle
+                    style={{
                       textTransform: 'uppercase',
                       fontWeight: 600,
                       color: '#ffffff'
                       }}
-                      >
-                      {type.name} Scholars
-                    </IonCardTitle>
-                  </IonCardHeader>
+                    >
+                    {type.name} Scholars
+                  </IonCardTitle>
+                </IonCardHeader>
                   <IonCardContent>
                     <h1 style={{ fontSize: '2.5rem', fontWeight: 600, margin: 0 }}>
-                      {counts[type.name] || 0}
+                    {counts[type.name] || 0}
                     </h1>
                   </IonCardContent>
                 </IonCard>
-              </IonCol>
-            ))}
+                </IonCol>
+              ))}
 
           </IonRow>
 

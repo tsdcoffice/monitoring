@@ -15,6 +15,7 @@ import {
   IonCol,
   IonInputPasswordToggle,
   IonToolbar,
+  IonTitle,
 } from '@ionic/react';
 import { supabase } from '../supabaseClient';
 import { useHistory } from 'react-router-dom';
@@ -30,6 +31,7 @@ const UserAccount: React.FC = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const history = useHistory();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchSessionAndData = async () => {
@@ -87,40 +89,38 @@ const UserAccount: React.FC = () => {
   }, [history]);
 
   const handleUpdate = async () => {
-    if (password !== confirmPassword) {
-      setAlertMessage("Passwords don't match.");
-      setShowAlert(true);
-      return;
+  if (password !== confirmPassword) {
+    setAlertMessage("Passwords don't match.");
+    setShowAlert(true);
+    return;
+  }
+
+  if (!currentPassword) {
+    setAlertMessage("Please enter your current password to save changes.");
+    setShowAlert(true);
+    return;
+  }
+
+  setLoading(true); // ✅ Sugod sa Loading spinner effect
+
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      throw new Error('Session expired. Please log in again.');
     }
 
-    const { data: session, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError || !session || !session.session) {
-      setAlertMessage('Error fetching session or no session available.');
-      setShowAlert(true);
-      return;
-    }
-
-    const user = session.session.user;
-    if (!user.email) {
-      setAlertMessage('Error: User email is missing.');
-      setShowAlert(true);
-      return;
-    }
-
-    // Verify current password
-    const { error: passwordError } = await supabase.auth.signInWithPassword({
-      email: user.email,
+    // 1. Verify current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: session.user.email!,
       password: currentPassword,
     });
 
-    if (passwordError) {
-      setAlertMessage('Incorrect current password.');
-      setShowAlert(true);
-      return;
+    if (signInError) {
+      throw new Error('Incorrect current password.');
     }
 
-    // Update user info
+    // 2. Update user info sa table
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -128,48 +128,52 @@ const UserAccount: React.FC = () => {
         user_lastname: lastName,
         username: username,
       })
-      .eq('user_email', user.email);
+      .eq('user_email', session.user.email);
 
-    if (updateError) {
-      setAlertMessage(updateError.message);
-      setShowAlert(true);
-      return;
-    }
+    if (updateError) throw updateError;
 
-    // Update password if provided
+    // 3. Update password kung naay gi-input
     if (password) {
-      const { error: passwordUpdateError } = await supabase.auth.updateUser({
+      const { error: passUpdateError } = await supabase.auth.updateUser({
         password: password,
       });
-
-      if (passwordUpdateError) {
-        setAlertMessage(passwordUpdateError.message);
-        setShowAlert(true);
-        return;
-      }
+      if (passUpdateError) throw passUpdateError;
     }
+
+    // ✅ KINI ANG MO-CLEAR SA MGA INPUT BOXES
+    setCurrentPassword('');
+    setPassword('');
+    setConfirmPassword('');
 
     setAlertMessage('Account updated successfully!');
     setShowAlert(true);
-    history.push('/app'); // Redirect to app dashboard
-  };
+
+    // I-redirect human ang 1.5 seconds
+    setTimeout(() => {
+      history.replace('/account'); 
+    }, 1500);
+
+  } catch (error: any) {
+    setAlertMessage(error.message || 'An error occurred.');
+    setShowAlert(true);
+  } finally {
+    setLoading(false); // ✅ Sigurado nga mawala ang loading maski naay error
+  }
+};
 
   return (
     <IonPage>
       <IonHeader>
-        
-        <IonButtons slot="start">
-          <IonBackButton defaultHref="/app" />
-        </IonButtons>
-      </IonHeader>
+  <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
+    <IonButtons slot="start">
+      <IonBackButton defaultHref="/app" />
+    </IonButtons>
+    <IonTitle style={{ fontWeight: 600 }}>EDIT ACCOUNT</IonTitle>
+  </IonToolbar>
+</IonHeader>
 
       <IonContent className="ion-padding">
-        <IonItem>
-          <IonText color="secondary">
-            <h1>Edit Account</h1>
-          </IonText>
-        </IonItem>
-        <br />
+      
 
         <IonGrid>
           <IonRow>
@@ -268,10 +272,16 @@ const UserAccount: React.FC = () => {
           </IonRow>
         </IonGrid>
 
-        <IonButton expand="full" onClick={handleUpdate} shape="round">
-          Update Account
+        <IonButton 
+          expand="full" 
+          onClick={handleUpdate} 
+          shape="round" 
+          disabled={loading} // ✅ Dili ma-click samtang nag-loading
+          style={{ marginTop: '20px', '--background': '#10377a' }}
+          >
+          {loading ? 'Updating...' : 'Update Account'}
         </IonButton>
-
+        
         <IonAlert
           isOpen={showAlert}
           onDidDismiss={() => setShowAlert(false)}
