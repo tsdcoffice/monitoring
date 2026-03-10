@@ -11,8 +11,12 @@ import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
 import * as XLSX from "xlsx";
-import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
+import { 
+  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun,
+  AlignmentType, HeadingLevel
+} from "docx";
 import { saveAs } from "file-saver";
+import headerImg from "../pics/header.png";
 
 import {
   printOutline,
@@ -219,15 +223,53 @@ const handlePrint = () => {
       <head>
         <title>TSDC Trainee List</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { text-align: center; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #000; padding: 6px; font-size: 12px; }
-          th { background: #f2f2f2; }
+          body { 
+  font-family: Arial, sans-serif; 
+  padding: 20px; 
+}
+
+h2 { 
+  text-align:center; 
+  margin-top:10px; 
+  margin-bottom:5px; 
+}
+
+.generated { 
+  text-align:center; 
+  font-size:12px; 
+  margin-bottom:15px; 
+}
+
+table { 
+  width:100%; 
+  border-collapse:collapse; 
+}
+
+thead{
+  display:table-header-group;
+}
+
+thead {
+  display: table-header-group;
+}
+
+th, td {
+  border:1px solid #333;
+  padding:6px;
+  font-size:12px;
+  text-align:center;
+}
+
+th{
+  background:#10377a;
+  color:white;
+}
         </style>
       </head>
       <body>
-        <h2>TSDC Trainee List</h2>
+        <img src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
+<h2>TSDC Trainee List</h2>
+<div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
         <table>
           ${generateTableRows()}
         </table>
@@ -244,8 +286,16 @@ const handlePrint = () => {
 const handleDownloadPDF = () => {
   const pdf = new jsPDF('p', 'mm', 'a4');
 
-  pdf.setFontSize(14);
-  pdf.text('TSDC Trainee List', 105, 15, { align: 'center' });
+  const img = new Image();
+  img.src = headerImg;
+
+pdf.addImage(img, "PNG", 10, 5, 190, 30);
+
+  pdf.setFontSize(16);
+pdf.text('TSDC Trainee List', 105, 40, { align: 'center' });
+
+pdf.setFontSize(10);
+pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
 
   const tableColumn = [
     "Barangay",
@@ -268,18 +318,38 @@ const handleDownloadPDF = () => {
   ]);
 
   autoTable(pdf, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: 20,
-    styles: { fontSize: 8 }
-  });
+  head: [tableColumn],
+  body: tableRows,
+  startY: 50,
+  showHead: "everyPage",
+
+  
+
+  styles: {
+    fontSize:8,
+    halign:'center',
+    valign:'middle'
+  },
+
+  headStyles:{
+    fillColor:[16,55,122],
+    textColor:255,
+    fontStyle:'bold',
+    halign:'center'
+  },
+
+  alternateRowStyles:{
+    fillColor:[245,245,245]
+  }
+});
 
   pdf.save('tsdc_trainee_list.pdf');
 };
 
 const generateTableRows = () => {
   const header = `
-    <tr>
+      <thead>
+      <tr>
       <th>Barangay</th>
       <th>Name</th>
       <th>Gender</th>
@@ -288,6 +358,8 @@ const generateTableRows = () => {
       <th>Date</th>
       <th>Training Type</th>
     </tr>
+    </thead>
+    <tbody>
   `;
 
   const rows = trainees.map(t => `
@@ -302,7 +374,7 @@ const generateTableRows = () => {
     </tr>
   `).join('');
 
-  return header + rows;
+  return header + rows + "</tbody>";
 };
 
    const downloadExcel = () => {
@@ -317,7 +389,31 @@ const generateTableRows = () => {
     "Training Type": trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ""
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
+  const worksheet = XLSX.utils.json_to_sheet([]);
+
+XLSX.utils.sheet_add_aoa(
+  worksheet,
+  [
+    ["TSDC Trainee List"],
+    [`Generated: ${new Date().toLocaleDateString()}`],
+    []
+  ],
+  { origin: "A1" }
+);
+
+XLSX.utils.sheet_add_json(
+  worksheet,
+  data,
+  { origin: "A4" }
+);
+
+  const headerRow = ["Barangay","Name","Gender","Education","IP","Date","Training Type"];
+
+XLSX.utils.sheet_add_aoa(
+  worksheet,
+  [headerRow],
+  { origin: "A4" }
+);
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
@@ -335,10 +431,12 @@ const generateTableRows = () => {
 };
 
   const downloadWord = async () => {
+    const generatedDate = new Date().toLocaleDateString();
 
   const rows = [
 
     new TableRow({
+      tableHeader: true,
       children: [
         new TableCell({children:[new Paragraph("Barangay")]}),
         new TableCell({children:[new Paragraph("Name")]}),
@@ -368,13 +466,42 @@ const generateTableRows = () => {
   const doc = new Document({
     sections: [{
       children: [
-        new Paragraph({
-          text: "TSDC Trainee List",
-          heading: "Heading1"
-        }),
-        new Paragraph(" "),
-        new Table({ rows })
-      ]
+
+  new Paragraph({
+    children: [
+      new ImageRun({
+        data: await fetch(headerImg).then(r => r.arrayBuffer()),
+        transformation: {
+          width: 500,
+          height: 100
+        },
+        type: "png"
+      })
+    ]
+  }),
+
+  new Paragraph({
+  text: "TSDC Trainee List",
+  heading: HeadingLevel.HEADING_1,
+  alignment: AlignmentType.CENTER
+}),
+
+new Paragraph({
+  text: `Generated: ${generatedDate}`,
+  alignment: AlignmentType.CENTER
+}),
+
+new Paragraph(" "),
+
+  new Table({
+  rows,
+  width: {
+    size: 100,
+    type: "pct"
+  }
+})
+
+]
     }]
   });
 
@@ -511,7 +638,9 @@ const generateTableRows = () => {
             <IonRow style={{
               fontWeight:'bold',
               borderBottom:'2px solid #333',
-              background:'#f2f2f2'
+              background:'#10377a',
+              color:'white',
+              textAlign:'center'
             }}>
               <IonCol>Barangay</IonCol>
               <IonCol>Name</IonCol>
