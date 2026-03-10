@@ -2,7 +2,6 @@ import React from 'react';
 import { Redirect, Route, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { HashRouter } from 'react-router-dom';
 
 /* Core CSS */
 import '@ionic/react/css/core.css';
@@ -73,11 +72,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <IonApp>
-    <HashRouter> {/* ✅ Mao ni ang bida */}
-      <IonReactRouter> {/* ✅ Wala nay basename="/monitoring" diri */}
-        <AppContent />
-      </IonReactRouter>
-    </HashRouter>
+    <IonReactRouter basename="/monitoring">
+      <AppContent />
+    </IonReactRouter>
   </IonApp>
 );
 
