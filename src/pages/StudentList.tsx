@@ -39,6 +39,7 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { ImageRun } from "docx";
+import { ShadingType } from "docx";
 
 
 interface Student {
@@ -254,13 +255,19 @@ if (data) {
 
   /* PRINT */
   const handlePrint = () => {
-    const printWindow = window.open('', '', 'width=1000,height=700');
-    if (!printWindow) return;
 
-    printWindow.document.write(generateHTMLTable(filteredStudents));
-    printWindow.document.close();
-    printWindow.print();
+  const printWindow = window.open('', '', 'width=1000,height=700');
+  if (!printWindow) return;
+
+  printWindow.document.write(generateHTMLTable(filteredStudents));
+  printWindow.document.close();
+
+  printWindow.onload = () => {
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
+};
 
   const generateHTMLTable = (data: Student[]) => `
     <html>
@@ -269,7 +276,7 @@ if (data) {
           body { font-family: Arial; padding:20px; }
           table { width:100%; border-collapse:collapse; }
           th,td { border:1px solid #000; padding:5px; font-size:12px; }
-          th { background:#f2f2f2; }
+          th { background:#10377a; color:white; font-weight:bold; }
         </style>
       </head>
       <body>
@@ -280,6 +287,7 @@ if (data) {
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>Barangay</th>
               <th>Name</th>
               <th>Gender</th>
@@ -292,8 +300,9 @@ if (data) {
             </tr>
           </thead>
           <tbody>
-            ${data.map(s => `
+            ${data.map((s, i) => `
               <tr>
+                <td>${i + 1}</td>
                 <td>${s.barangay}</td>
                 <td>${s.lastname}, ${s.firstname}</td>
                 <td>${s.gender}</td>
@@ -333,7 +342,8 @@ if (data) {
 
   doc.addImage(img, "PNG", 10, 5, 190, 25);
 
-  const tableData = filteredStudents.map(s => [
+  const tableData = filteredStudents.map((s, i) => [
+  i + 1,
     s.barangay,
     `${s.lastname}, ${s.firstname}`,
     s.gender,
@@ -346,7 +356,7 @@ if (data) {
   ]);
 
   autoTable(doc, {
-    head: [['Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
+    head: [['No.','Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
     body: tableData,
     startY: 35,
     styles: { fontSize: 8 },
@@ -422,7 +432,8 @@ const handleBulkUpdate = async () => {
 
    const downloadExcel = () => {
 
-  const data = filteredStudents.map(s => ({
+  const data = filteredStudents.map((s, i) => ({
+  No: i + 1,
     Barangay: s.barangay,
     Name: `${s.lastname}, ${s.firstname}`,
     Gender: s.gender,
@@ -477,23 +488,66 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
   const rows = [
 
     // HEADER
-    new TableRow({
-      children: [
-        new TableCell({children:[new Paragraph("Barangay")]}),
-        new TableCell({children:[new Paragraph("Name")]}),
-        new TableCell({children:[new Paragraph("Gender")]}),
-        new TableCell({children:[new Paragraph("School")]}),
-        new TableCell({children:[new Paragraph("Course")]}),
-        new TableCell({children:[new Paragraph("Year")]}),
-        new TableCell({children:[new Paragraph("IP")]}),
-        new TableCell({children:[new Paragraph("Type")]}),
-        new TableCell({children:[new Paragraph("Status")]})
-      ]
+   new TableRow({
+  children: [
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("No.")]
     }),
 
-    ...filteredStudents.map(s =>
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Barangay")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Name")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Gender")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("School")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Course")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Year")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("IP")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Type")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Status")]
+    })
+
+  ]
+}),
+
+    ...filteredStudents.map((s, i) =>
       new TableRow({
         children: [
+          new TableCell({children:[new Paragraph(String(i + 1))]}),
           new TableCell({children:[new Paragraph(s.barangay)]}),
           new TableCell({children:[new Paragraph(`${s.lastname}, ${s.firstname}`)]}),
           new TableCell({children:[new Paragraph(s.gender)]}),
@@ -817,6 +871,8 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
         <IonGrid>
           <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
             {showSelect && <IonCol size="1">Select</IonCol>}
+            <IonCol size="1">No.</IonCol>
+            <IonCol>Barangay</IonCol>
             <IonCol>Barangay</IonCol>
             <IonCol>Name</IonCol>
             <IonCol>Gender</IonCol>
@@ -829,7 +885,7 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
             <IonCol>Action</IonCol>
           </IonRow>
 
-          {filteredStudents.map(student => (
+          {filteredStudents.map((student, index) => (
             <IonRow key={student.id}
               style={{ backgroundColor: getRowColor(student.status) }}
             >
@@ -842,6 +898,7 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
   />
 </IonCol>
 )}
+              <IonCol size="1">{index + 1}</IonCol>
               <IonCol>{student.barangay}</IonCol>
               <IonCol>{student.lastname}, {student.firstname}</IonCol>
               <IonCol>{student.gender}</IonCol>
