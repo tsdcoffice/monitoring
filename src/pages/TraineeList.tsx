@@ -293,7 +293,9 @@ const handlePrint = () => {
         <img id="print-header" src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
         <h2>TSDC Trainee List</h2>
 
-<div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
+<div class="generated" style="margin-bottom:15px;">
+Generated: ${new Date().toLocaleDateString()}
+</div>
 
 ${batchDetails ? `
 <div style="margin-bottom:15px;font-size:12px">
@@ -709,23 +711,50 @@ new Paragraph({
 
 ...(batchDetails ? [
 
-new Paragraph({
-  children: [
-    new TextRun(`Batch: ${batchDetails.batch}`),
-    new TextRun("\t\t"),
-    new TextRun(`Start Date: ${batchDetails.start_date}`),
-    new TextRun("\t\t"),
-    new TextRun(`End Date: ${batchDetails.end_date}`)
-  ]
-}),
+new Paragraph(" "), // space after generated date
 
-new Paragraph({
-  children: [
-    new TextRun(`Duration: ${batchDetails.duration_hours} hrs`),
-    new TextRun("\t\t"),
-    new TextRun(`Trainor: ${batchDetails.trainor}`),
-    new TextRun("\t\t"),
-    new TextRun(`Venue: ${batchDetails.venue}`)
+new Table({
+  width: { size: 100, type: "pct" },
+
+  borders: {
+    top: { style: "none", size: 0, color: "FFFFFF" },
+    bottom: { style: "none", size: 0, color: "FFFFFF" },
+    left: { style: "none", size: 0, color: "FFFFFF" },
+    right: { style: "none", size: 0, color: "FFFFFF" },
+    insideHorizontal: { style: "none", size: 0, color: "FFFFFF" },
+    insideVertical: { style: "none", size: 0, color: "FFFFFF" }
+  },
+
+  rows: [
+
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph(`Batch: ${batchDetails.batch}`)]
+        }),
+        new TableCell({
+          children: [new Paragraph(`Start Date: ${batchDetails.start_date}`)]
+        }),
+        new TableCell({
+          children: [new Paragraph(`End Date: ${batchDetails.end_date}`)]
+        })
+      ]
+    }),
+
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph(`Duration: ${batchDetails.duration_hours} hrs`)]
+        }),
+        new TableCell({
+          children: [new Paragraph(`Trainor: ${batchDetails.trainor}`)]
+        }),
+        new TableCell({
+          children: [new Paragraph(`Venue: ${batchDetails.venue}`)]
+        })
+      ]
+    })
+
   ]
 }),
 
