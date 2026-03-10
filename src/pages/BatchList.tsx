@@ -8,6 +8,7 @@ import { arrowBackOutline } from "ionicons/icons";
 import { useParams, useHistory } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { useIonViewWillEnter } from "@ionic/react";
 
 interface BatchCount {
   batch:number
@@ -32,7 +33,7 @@ const courseSlugMap:{[slug:string]:string} = {
   "housekeeping-nc2": "Housekeeping NC II",
   "masonry-hallow": "Masonry and Hallow Blocks",
   "massage-therapy": "Massage Therapy",
-  "organic-nc2": "Organic agriculture NC II",
+  "organic-nc2": "Organic Agriculture NC II",
   "plumbing": "Plumbing",
   "pineapple-processing": "Pineapple Processing",
   "scaffolding": "Scaffolding",
@@ -48,9 +49,32 @@ const BatchList:React.FC = () => {
 
   const [batches,setBatches] = useState<BatchCount[]>([])
 
-  useEffect(()=>{
-    fetchBatches()
-  },[slug])
+  useEffect(() => {
+
+  fetchBatches()
+
+  const channel = supabase
+    .channel("trainee-changes")
+
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "trainees"
+      },
+      () => {
+        fetchBatches()
+      }
+    )
+
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+
+}, [slug])
 
   const fetchBatches = async () => {
 

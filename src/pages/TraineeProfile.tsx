@@ -99,18 +99,20 @@ const TraineeProfile: React.FC = () => {
 
   const saveTrainee = async () => {
 
-    if (
-      !formData.lastname ||
-      !formData.firstname ||
-      !formData.gender ||
-      !formData.barangay ||
-      !formData.educational_attainment ||
-      !formData.course ||
-      !formData.batch
-    ) {
-      alert("Please fill in all required fields.");
-      return;
-    }
+    const requiredFields = [
+  formData.lastname,
+  formData.firstname,
+  formData.gender,
+  formData.barangay,
+  formData.educational_attainment,
+  formData.course,
+  formData.batch
+];
+
+if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
+  alert("Please fill in all required fields.");
+  return;
+}
 
     if (formData.is_ip && !formData.ip_group) {
       alert("Please select IP Tribe.");
@@ -302,26 +304,36 @@ const TraineeProfile: React.FC = () => {
 <IonItem>
   <IonLabel position="stacked">Batch *</IonLabel>
   <IonInput
-    type="number"
-    min="1"
-    max="1000"
-    placeholder="Enter Batch Number"
-    value={formData.batch}
-    onIonChange={e => {
-      const value = e.detail.value;
+  type="number"
+  min="1"
+  max="1000"
+  placeholder="Enter Batch Number"
+  value={formData.batch}
 
-      if (!value) {
-        handleChange('batch', '');
-        return;
-      }
+  onIonChange={e => {
+    const value = e.detail.value;
 
-      const num = parseInt(value);
+    if (!value) {
+      handleChange('batch', '');
+      return;
+    }
 
-      if (num >= 1 && num <= 1000) {
-        handleChange('batch', num);
-      }
-    }}
-  />
+    const num = parseInt(value);
+
+    if (num >= 1 && num <= 1000) {
+      handleChange('batch', num);
+    }
+  }}
+
+  onKeyDown={(e:any)=>{
+    if(e.key === "Enter"){
+      e.preventDefault()
+       setTimeout(()=>{
+      saveTrainee()
+      },100)
+    }
+  }}
+/>
 </IonItem>
 
         <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">

@@ -14,6 +14,7 @@ import * as XLSX from "xlsx";
 import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
+import { TextRun } from "docx";
 
 import {
   printOutline,
@@ -41,6 +42,17 @@ interface TrainingType {
   name: string;
 }
 
+interface BatchDetails {
+  id: string;
+  training_type_id: string;
+  batch: string;
+  start_date: string;
+  end_date: string;
+  duration_hours: number;
+  trainor: string;
+  venue: string;
+}
+
 const courseSlugMap: { [slug: string]: string } = {
   "barista": "Barista",
   "barangay-health": "Barangay Health Services NC II",
@@ -59,7 +71,7 @@ const courseSlugMap: { [slug: string]: string } = {
   "housekeeping-nc2": "Housekeeping NC II",
   "masonry-hallow": "Masonry and Hallow Blocks",
   "massage-therapy": "Massage Therapy",
-  "organic-nc2": "Organic agriculture NC II",
+  "organic-nc2": "Organic Agriculture NC II",
   "plumbing": "Plumbing",
   "pineapple-processing": "Pineapple Processing",
   "scaffolding": "Scaffolding",
@@ -72,7 +84,7 @@ const barangays = [
   "Agusan Canyon","Alae","Dahilayan","Guilang-Guilang","Kalugmanan",
   "Lingion","Lunocan","Maluko","Mampayag","Mantibugao",
   "North Poblacion","Santiago","Sankanan","San Miguel","South Poblacion",
-  "Tankulan","Ticalaan","Dicklum","Dalirig","Damilag",
+  "Tankulan","Ticala","Dicklum","Dalirig","Damilag",
   "Pagalungan","Lingi-on"
 ];
 
@@ -87,6 +99,12 @@ const TraineeList: React.FC = () => {
 
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [trainingTypes, setTrainingTypes] = useState<TrainingType[]>([]);
+  const [batchDetails, setBatchDetails] = useState<BatchDetails | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [durationHours, setDurationHours] = useState<number | "">("");
+  const [trainor, setTrainor] = useState("");
+  const [venue, setVenue] = useState("");
 
   const [searchText, setSearchText] = useState(urlSearch);
   useEffect(() => {
@@ -205,6 +223,44 @@ const TraineeList: React.FC = () => {
     sortOption
   ]);
 
+  useEffect(() => {
+
+  const fetchBatchDetails = async () => {
+
+    if (!slug || !batch) return;
+
+    const trainingName = courseSlugMap[slug];
+
+    const { data: typeData } = await supabase
+      .from('training_types')
+      .select('id')
+      .eq('name', trainingName)
+      .single();
+
+    if (!typeData) return;
+
+    const { data } = await supabase
+      .from('training_batches')
+      .select('*')
+      .eq('training_type_id', typeData.id)
+      .eq('batch', batch)
+      .single();
+
+    if (data) {
+      setBatchDetails(data);
+      setStartDate(data.start_date || "");
+    setEndDate(data.end_date || "");
+    setDurationHours(data.duration_hours || "");
+    setTrainor(data.trainor || "");
+    setVenue(data.venue || "");
+    }
+
+  };
+
+  fetchBatchDetails();
+
+}, [slug, batch]);
+
   const resetFilters = () => {
     setSelectedBarangay('');
     setSelectedTrainingType('');
@@ -236,7 +292,30 @@ const handlePrint = () => {
       <body>
         <img id="print-header" src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
         <h2>TSDC Trainee List</h2>
-        <div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
+
+<div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
+
+${batchDetails ? `
+<div style="margin-bottom:15px;font-size:12px">
+
+<div style="margin-bottom:15px;font-size:12px">
+
+<div style="display:flex;">
+<div style="width:33%"><b>Batch:</b> ${batchDetails.batch}</div>
+<div style="width:33%"><b>Start Date:</b> ${batchDetails.start_date}</div>
+<div style="width:33%"><b>End Date:</b> ${batchDetails.end_date}</div>
+</div>
+
+<div style="display:flex;margin-top:5px;">
+<div style="width:33%"><b>Duration:</b> ${batchDetails.duration_hours} hrs</div>
+<div style="width:33%"><b>Trainor:</b> ${batchDetails.trainor}</div>
+<div style="width:33%"><b>Venue:</b> ${batchDetails.venue}</div>
+</div>
+
+</div>
+
+</div>
+` : ""}
         <table>
           ${generateTableRows()}
         </table>
@@ -281,6 +360,43 @@ pdf.text('TSDC Trainee List', 105, 40, { align: 'center' });
 
 pdf.setFontSize(10);
 pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
+let startY = 60;
+
+if(batchDetails){
+
+autoTable(pdf, {
+  startY: startY,
+
+  body: [
+    [
+      `Batch: ${batchDetails.batch}`,
+      `Start Date: ${batchDetails.start_date}`,
+      `End Date: ${batchDetails.end_date}`
+    ],
+    [
+      `Duration: ${batchDetails.duration_hours} hrs`,
+      `Trainor: ${batchDetails.trainor}`,
+      `Venue: ${batchDetails.venue}`
+    ]
+  ],
+
+  theme: "plain",
+
+  styles:{
+    fontSize:10,
+    halign:"left"
+  },
+
+  columnStyles:{
+    0:{cellWidth:63},
+    1:{cellWidth:63},
+    2:{cellWidth:63}
+  }
+
+});
+
+startY = (pdf as any).lastAutoTable.finalY + 5;
+}
 
   const tableColumn = [
     "No.",
@@ -307,7 +423,7 @@ pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'cen
   autoTable(pdf, {
   head: [tableColumn],
   body: tableRows,
-  startY: 50,
+  startY: startY,
   showHead: "everyPage",
 
   
@@ -379,31 +495,68 @@ const generateTableRows = () => {
     "Training Type": trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ""
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet([]);
+ const worksheet = XLSX.utils.json_to_sheet([]);
 
+// Add title + batch details
 XLSX.utils.sheet_add_aoa(
   worksheet,
   [
     ["TSDC Trainee List"],
     [`Generated: ${new Date().toLocaleDateString()}`],
-    []
+    [],
+    ...(batchDetails ? [
+      [`Batch: ${batchDetails.batch}`],
+      [`Start Date: ${batchDetails.start_date}`],
+      [`End Date: ${batchDetails.end_date}`],
+      [`Duration: ${batchDetails.duration_hours} hrs`],
+      [`Trainor: ${batchDetails.trainor}`],
+      [`Venue: ${batchDetails.venue}`],
+      []
+    ] : [])
   ],
   { origin: "A1" }
 );
 
-XLSX.utils.sheet_add_json(
-  worksheet,
-  data,
-  { origin: "A4" }
-);
-
-  const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
+// Header row
+const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
 
 XLSX.utils.sheet_add_aoa(
   worksheet,
   [headerRow],
-  { origin: "A4" }
+  { origin: "A10" }
 );
+
+// Add data rows
+XLSX.utils.sheet_add_json(
+  worksheet,
+  data,
+  { origin: "A11", skipHeader: true }
+);
+
+// Style header cells
+const headerStyle = {
+  fill: { fgColor: { rgb: "10377A" } },
+  font: { bold: true, color: { rgb: "FFFFFF" } },
+  alignment: { horizontal: "center", vertical: "center" }
+};
+
+for (let C = 0; C < headerRow.length; C++) {
+  const cellAddress = XLSX.utils.encode_cell({ r: 9, c: C }); // row 10
+  if (!worksheet[cellAddress]) continue;
+  worksheet[cellAddress].s = headerStyle;
+}
+
+// Auto column width
+worksheet["!cols"] = [
+  { wch: 5 },
+  { wch: 18 },
+  { wch: 30 },
+  { wch: 10 },
+  { wch: 20 },
+  { wch: 10 },
+  { wch: 12 },
+  { wch: 30 }
+];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
@@ -418,6 +571,41 @@ XLSX.utils.sheet_add_aoa(
   saveAs(blob, "tsdc_trainee_list.xlsx");
 
   setShowDownload(false);
+};
+
+const saveBatchDetails = async () => {
+
+  if (!slug || !batch) return;
+
+  const trainingName = courseSlugMap[slug];
+
+  const { data: typeData } = await supabase
+    .from("training_types")
+    .select("id")
+    .eq("name", trainingName)
+    .single();
+
+  if (!typeData) return;
+
+  const payload = {
+    training_type_id: typeData.id,
+    batch: batch,
+    start_date: startDate,
+    end_date: endDate,
+    duration_hours: durationHours,
+    trainor: trainor,
+    venue: venue
+  };
+
+  const { error } = await supabase
+    .from("training_batches")
+    .upsert(payload, {
+      onConflict: "training_type_id,batch"
+    });
+
+  if (!error) {
+    alert("Batch details saved!");
+  }
 };
 
   const downloadWord = async () => {
@@ -470,6 +658,7 @@ XLSX.utils.sheet_add_aoa(
     })
 
   ]
+  
 }),
 
     ...trainees.map((t, index) =>
@@ -487,6 +676,8 @@ XLSX.utils.sheet_add_aoa(
   })
 )
   ];
+
+  
 
   const doc = new Document({
     sections: [{
@@ -515,6 +706,32 @@ new Paragraph({
   text: `Generated: ${generatedDate}`,
   alignment: AlignmentType.CENTER
 }),
+
+...(batchDetails ? [
+
+new Paragraph({
+  children: [
+    new TextRun(`Batch: ${batchDetails.batch}`),
+    new TextRun("\t\t"),
+    new TextRun(`Start Date: ${batchDetails.start_date}`),
+    new TextRun("\t\t"),
+    new TextRun(`End Date: ${batchDetails.end_date}`)
+  ]
+}),
+
+new Paragraph({
+  children: [
+    new TextRun(`Duration: ${batchDetails.duration_hours} hrs`),
+    new TextRun("\t\t"),
+    new TextRun(`Trainor: ${batchDetails.trainor}`),
+    new TextRun("\t\t"),
+    new TextRun(`Venue: ${batchDetails.venue}`)
+  ]
+}),
+
+new Paragraph(" "),
+
+] : []),
 
 new Paragraph(" "),
 
@@ -655,8 +872,87 @@ new Paragraph(" "),
         </IonPopover>
 
         <IonText>
-          <h2>Total Displayed: {trainees.length}</h2>
-        </IonText>
+  <h2>Total Displayed: {trainees.length}</h2>
+</IonText>
+
+{/* BATCH DETAILS TABLE */}
+
+{slug !== "all" && batch && (
+
+<IonGrid style={{
+border:"1px solid #ccc",
+marginBottom:"15px",
+padding:"10px",
+borderRadius:"6px"
+}}>
+
+<IonRow style={{fontWeight:"bold", background:"#10377a", color:"white"}}>
+<IonCol>Batch</IonCol>
+<IonCol>Start Date</IonCol>
+<IonCol>End Date</IonCol>
+<IonCol>Duration (hrs)</IonCol>
+<IonCol>Trainor</IonCol>
+<IonCol>Venue</IonCol>
+<IonCol>Action</IonCol>
+</IonRow>
+
+<IonRow>
+
+<IonCol>{batch}</IonCol>
+
+<IonCol>
+<IonInput
+type="date"
+value={startDate}
+onIonChange={e => setStartDate(e.detail.value!)}
+/>
+</IonCol>
+
+<IonCol>
+<IonInput
+type="date"
+value={endDate}
+onIonChange={e => setEndDate(e.detail.value!)}
+/>
+</IonCol>
+
+<IonCol>
+<IonInput
+type="number"
+value={durationHours}
+onIonChange={e => setDurationHours(Number(e.detail.value))}
+placeholder="Hours"
+/>
+</IonCol>
+
+<IonCol>
+<IonInput
+value={trainor}
+onIonChange={e => setTrainor(e.detail.value!)}
+placeholder="Trainor"
+/>
+</IonCol>
+
+<IonCol>
+<IonInput
+value={venue}
+onIonChange={e => setVenue(e.detail.value!)}
+placeholder="Venue"
+/>
+</IonCol>
+
+<IonCol>
+<IonButton size="small" onClick={saveBatchDetails}>
+Save
+</IonButton>
+</IonCol>
+
+</IonRow>
+
+</IonGrid>
+)}
+
+
 
         <div ref={tableRef}>
           <IonGrid>
