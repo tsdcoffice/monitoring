@@ -11,10 +11,7 @@ import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
 import * as XLSX from "xlsx";
-import { 
-  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun,
-  AlignmentType, HeadingLevel
-} from "docx";
+import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 
@@ -298,6 +295,7 @@ pdf.setFontSize(10);
 pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
 
   const tableColumn = [
+    "No.",
     "Barangay",
     "Name",
     "Gender",
@@ -307,7 +305,8 @@ pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'cen
     "Training Type"
   ];
 
-  const tableRows = trainees.map(t => [
+  const tableRows = trainees.map((t, index) => [
+    index + 1,
     t.barangay,
     `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
     t.gender,
@@ -350,6 +349,7 @@ const generateTableRows = () => {
   const header = `
       <thead>
       <tr>
+      <th>No.</th>
       <th>Barangay</th>
       <th>Name</th>
       <th>Gender</th>
@@ -362,8 +362,9 @@ const generateTableRows = () => {
     <tbody>
   `;
 
-  const rows = trainees.map(t => `
+  const rows = trainees.map((t, index) => `
     <tr>
+      <td>${index + 1}</td>
       <td>${t.barangay}</td>
       <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
       <td>${t.gender}</td>
@@ -379,7 +380,8 @@ const generateTableRows = () => {
 
    const downloadExcel = () => {
 
-  const data = trainees.map(t => ({
+  const data = trainees.map((t, index) => ({
+  "No.": index + 1,
     Barangay: t.barangay,
     Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
     Gender: t.gender,
@@ -407,7 +409,7 @@ XLSX.utils.sheet_add_json(
   { origin: "A4" }
 );
 
-  const headerRow = ["Barangay","Name","Gender","Education","IP","Date","Training Type"];
+  const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
 
 XLSX.utils.sheet_add_aoa(
   worksheet,
@@ -436,31 +438,66 @@ XLSX.utils.sheet_add_aoa(
   const rows = [
 
     new TableRow({
-      tableHeader: true,
-      children: [
-        new TableCell({children:[new Paragraph("Barangay")]}),
-        new TableCell({children:[new Paragraph("Name")]}),
-        new TableCell({children:[new Paragraph("Gender")]}),
-        new TableCell({children:[new Paragraph("Education")]}),
-        new TableCell({children:[new Paragraph("IP")]}),
-        new TableCell({children:[new Paragraph("Date")]}),
-        new TableCell({children:[new Paragraph("Training Type")]})
-      ]
+  tableHeader: true,
+  children: [
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("No.")]
     }),
 
-    ...trainees.map(t =>
-      new TableRow({
-        children: [
-          new TableCell({children:[new Paragraph(t.barangay)]}),
-          new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
-          new TableCell({children:[new Paragraph(t.gender)]}),
-          new TableCell({children:[new Paragraph(t.educational_attainment)]}),
-          new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
-          new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
-          new TableCell({children:[new Paragraph(trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "")]})
-        ]
-      })
-    )
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Barangay")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Name")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Gender")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Education")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("IP")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Date")]
+    }),
+
+    new TableCell({
+      shading:{ fill:"10377A", type:ShadingType.CLEAR },
+      children:[new Paragraph("Training Type")]
+    })
+
+  ]
+}),
+
+    ...trainees.map((t, index) =>
+  new TableRow({
+    children: [
+      new TableCell({children:[new Paragraph(String(index + 1))]}),
+      new TableCell({children:[new Paragraph(t.barangay)]}),
+      new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
+      new TableCell({children:[new Paragraph(t.gender)]}),
+      new TableCell({children:[new Paragraph(t.educational_attainment)]}),
+      new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
+      new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
+      new TableCell({children:[new Paragraph(trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "")]})
+    ]
+  })
+)
   ];
 
   const doc = new Document({
