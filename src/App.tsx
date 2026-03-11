@@ -2,6 +2,8 @@ import React from 'react';
 import { Redirect, Route, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
 
 /* Core CSS */
 import '@ionic/react/css/core.css';
@@ -34,7 +36,7 @@ import BatchList from './pages/BatchList';
 
 setupIonicReact();
 
-const AppContent: React.FC = () => {
+const AppContent: React.FC<{ session: any }> = ({ session }) => {
   const location = useLocation();
 
   const isLoginPage = location.pathname.includes('/login');
@@ -73,12 +75,36 @@ const AppContent: React.FC = () => {
   );
 };
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter basename="/monitoring">
-      <AppContent />
-    </IonReactRouter>
-  </IonApp>
-);
+const App: React.FC = () => {
+  const [session, setSession] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) return null;
+
+  return (
+    <IonApp>
+      <IonReactRouter basename="/monitoring">
+        <AppContent session={session} />
+      </IonReactRouter>
+    </IonApp>
+  );
+};
 
 export default App;
