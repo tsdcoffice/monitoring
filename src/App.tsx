@@ -1,6 +1,6 @@
 import React from 'react';
 import { Redirect, Route, useLocation } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
+import { IonApp, IonContent, IonRouterOutlet, IonSplitPane, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
@@ -48,7 +48,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
       <IonRouterOutlet id="main">
 
         {/* Default redirect */}
-        <Route exact path="/"> {session ? <Redirect to="/dashboard" /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/"> <Redirect to="/login" /> </Route>
         <Route exact path="/login"> {session ? <Redirect to="/dashboard" /> : <Login />} </Route>
         <Route exact path="/dashboard"> {session ? <Dashboard /> : <Redirect to="/login" />} </Route>
         <Route exact path="/profiling">  {session ? <Profiling /> : <Redirect to="/login" />} </Route>
@@ -91,7 +91,9 @@ const App: React.FC = () => {
     };
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+  return <IonApp><IonContent>Loading...</IonContent></IonApp>;
+}
 
   return (
     <IonApp>
