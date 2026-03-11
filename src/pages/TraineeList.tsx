@@ -830,14 +830,20 @@ new Paragraph(" "),
         <IonToolbar color="primary">
           <IonButtons slot="start">
               <IonButton
-                fill="clear"
-                onClick={() => {
-                resetFilters();
-                history.push('/training');
-                }}
-              >
-              <IonIcon icon={arrowBackOutline} />
-            </IonButton>
+  fill="clear"
+  onClick={() => {
+    resetFilters();
+    if (slug && batch) {
+      // If we are looking at a specific batch, go back to that Batch List
+      history.push(`/batch/${slug}`);
+    } else {
+      // Otherwise (All Trainees), go back to the main Training dashboard
+      history.push('/training');
+    }
+  }}
+>
+  <IonIcon icon={arrowBackOutline} />
+</IonButton>
           </IonButtons>
           <IonTitle>
             {slug === 'all' || !slug

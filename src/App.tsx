@@ -60,6 +60,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
         <Route exact path="/update-student/:id">  {session ? <UpdateStudent /> : <Redirect to="/login" />} </Route>
         <Route exact path="/batch/:slug">  {session ? <BatchList /> : <Redirect to="/login" />} </Route>
         <Route exact path="/trainees/:slug"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/trainees/:slug/:batch"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
 
         {/* Profiling children */}
         <Route exact path="/profiling/scholarship">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>
