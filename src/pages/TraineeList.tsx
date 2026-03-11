@@ -36,6 +36,7 @@ interface Trainee {
   is_ip: boolean;
   created_at: string;
   training_type_id: string;
+  batch: string;
 }
 
 interface TrainingType {
@@ -114,6 +115,8 @@ const TraineeList: React.FC = () => {
 
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedTrainingType, setSelectedTrainingType] = useState('');
+  const [selectedBatchFilter, setSelectedBatchFilter] = useState('');
+  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
 
   const [sortOption, setSortOption] = useState('date_desc');
   const [showFilter, setShowFilter] = useState(false);
@@ -145,6 +148,59 @@ const TraineeList: React.FC = () => {
     };
     fetchTypes();
   }, []);
+
+  /* =========================
+   FETCH UNIQUE BATCHES FROM TRAINEES
+========================== */
+useEffect(() => {
+  const fetchAvailableBatches = async () => {
+    // If no training type is selected, hide batches and reset filter
+    if (!selectedTrainingType) {
+      setAvailableBatches([]);
+      setSelectedBatchFilter('');
+      return;
+    }
+
+    // Fetch unique batches that are actually registered in profiling
+    const { data } = await supabase
+      .from('trainees')
+      .select('batch')
+      .eq('training_type_id', selectedTrainingType)
+      .not('batch', 'is', null);
+
+    if (data) {
+      const uniqueBatches = Array.from(new Set(data.map(item => item.batch))).sort();
+      setAvailableBatches(uniqueBatches);
+    }
+  };
+
+  fetchAvailableBatches();
+}, [selectedTrainingType]);
+
+// I-paste kini pagkahuman sa availableBatches useEffect
+useEffect(() => {
+  const fetchSelectedBatchDetails = async () => {
+    // Kung wala'y napili nga training type OR batch filter, i-clear ang details
+    if (!selectedTrainingType || !selectedBatchFilter) {
+      setBatchDetails(null);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('training_batches')
+      .select('*')
+      .eq('training_type_id', selectedTrainingType)
+      .eq('batch', selectedBatchFilter)
+      .maybeSingle();
+
+    if (data) {
+      setBatchDetails(data);
+    } else {
+      setBatchDetails(null);
+    }
+  };
+  fetchSelectedBatchDetails();
+}, [selectedTrainingType, selectedBatchFilter]);
 
   /* =========================
      FETCH TRAINEES
@@ -194,6 +250,10 @@ const TraineeList: React.FC = () => {
         query = query.eq('training_type_id', selectedTrainingType);
       }
 
+      if (selectedBatchFilter) {
+        query = query.eq('batch', selectedBatchFilter);
+      }
+
       switch (sortOption) {
         case 'az':
           query = query.order('lastname', { ascending: true });
@@ -220,6 +280,7 @@ const TraineeList: React.FC = () => {
     urlSearch,
     selectedBarangay,
     selectedTrainingType,
+    selectedBatchFilter,
     sortOption
   ]);
 
@@ -264,6 +325,7 @@ const TraineeList: React.FC = () => {
   const resetFilters = () => {
     setSelectedBarangay('');
     setSelectedTrainingType('');
+    setSelectedBatchFilter('');
     setSearchText('');
     setSortOption('date_desc');
   };
@@ -411,7 +473,11 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
     "Training Type"
   ];
 
-  const tableRows = trainees.map((t, index) => [
+ const tableRows = trainees.map((t, index) => {
+  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
+  const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+
+  return [
     index + 1,
     t.barangay,
     `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
@@ -419,8 +485,9 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
     t.educational_attainment,
     t.is_ip ? 'IP' : 'Not IP',
     new Date(t.created_at).toLocaleDateString(),
-    trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''
-  ]);
+    trainingDisplay
+  ];
+});
 
   autoTable(pdf, {
   head: [tableColumn],
@@ -455,20 +522,25 @@ const generateTableRows = () => {
   const header = `
       <thead>
       <tr>
-      <th>No.</th>
-      <th>Barangay</th>
-      <th>Name</th>
-      <th>Gender</th>
-      <th>Education</th>
-      <th>IP</th>
-      <th>Date</th>
-      <th>Training Type</th>
-    </tr>
-    </thead>
-    <tbody>
+        <th>No.</th>
+        <th>Barangay</th>
+        <th>Name</th>
+        <th>Gender</th>
+        <th>Education</th>
+        <th>IP</th>
+        <th>Date</th>
+        <th>Training Type</th>
+      </tr>
+      </thead>
+      <tbody>
   `;
 
-  const rows = trainees.map((t, index) => `
+  const rows = trainees.map((t, index) => {
+    const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
+    // KINI ANG LOGIC: Kung wala gi-filter ang batch, ipakita ang Batch No. tapad sa Training Type
+    const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+
+    return `
     <tr>
       <td>${index + 1}</td>
       <td>${t.barangay}</td>
@@ -477,25 +549,28 @@ const generateTableRows = () => {
       <td>${t.educational_attainment}</td>
       <td>${t.is_ip ? 'IP' : 'Not IP'}</td>
       <td>${new Date(t.created_at).toLocaleDateString()}</td>
-      <td>${trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}</td>
+      <td>${trainingDisplay}</td>
     </tr>
-  `).join('');
+  `}).join('');
 
   return header + rows + "</tbody>";
 };
 
    const downloadExcel = () => {
 
-  const data = trainees.map((t, index) => ({
-  "No.": index + 1,
+const data = trainees.map((t, index) => {
+  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+  return {
+    "No.": index + 1,
     Barangay: t.barangay,
     Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
     Gender: t.gender,
     Education: t.educational_attainment,
     IP: t.is_ip ? "IP" : "Not IP",
     Date: new Date(t.created_at).toLocaleDateString(),
-    "Training Type": trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ""
-  }));
+    "Training Type": !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName
+  };
+});
 
  const worksheet = XLSX.utils.json_to_sheet([]);
 
@@ -703,8 +778,12 @@ const saveBatchDetails = async () => {
   
 }),
 
-    ...trainees.map((t, index) =>
-  new TableRow({
+...trainees.map((t, index) => {
+  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+  // I-append ang Batch No. kung wala'y filter
+  const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+
+  return new TableRow({
     children: [
       new TableCell({children:[new Paragraph(String(index + 1))]}),
       new TableCell({children:[new Paragraph(t.barangay)]}),
@@ -713,10 +792,10 @@ const saveBatchDetails = async () => {
       new TableCell({children:[new Paragraph(t.educational_attainment)]}),
       new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
       new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
-      new TableCell({children:[new Paragraph(trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "")]})
+      new TableCell({children:[new Paragraph(trainingDisplay)]}) 
     ]
-  })
-)
+  });
+})
   ];
 
   
@@ -933,6 +1012,23 @@ new Paragraph(" "),
               </IonSelect>
             </IonItem>
 
+            {selectedTrainingType && availableBatches.length > 0 && (
+              <IonItem>
+                <IonLabel position="stacked">Batch</IonLabel>
+                <IonSelect
+                  interface="popover"
+                  value={selectedBatchFilter}
+                  onIonChange={e => setSelectedBatchFilter(e.detail.value)}
+                  placeholder="All Batches"
+                >
+                  <IonSelectOption value="">All Batches</IonSelectOption>
+                  {availableBatches.map(b => (
+                    <IonSelectOption key={b} value={b}>Batch {b}</IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            )}
+
             {/* RESET + OK BUTTON */}
             <div style={{display:'flex',gap:'8px',marginTop:'10px'}}>
               <IonButton expand="block" color="medium" onClick={resetFilters}>
@@ -1063,6 +1159,7 @@ Save
                 </IonCol>
                 <IonCol>
                   {trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
+                  {!selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
                 </IonCol>
               </IonRow>
             ))}
