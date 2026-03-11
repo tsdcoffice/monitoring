@@ -82,11 +82,10 @@ const courseSlugMap: { [slug: string]: string } = {
 };
 
 const barangays = [
-  "Agusan Canyon","Alae","Dahilayan","Guilang-Guilang","Kalugmanan",
-  "Lingion","Lunocan","Maluko","Mampayag","Mantibugao",
-  "North Poblacion","Santiago","Sankanan","San Miguel","South Poblacion",
-  "Tankulan","Ticala","Dicklum","Dalirig","Damilag",
-  "Pagalungan","Lingi-on"
+  "Agusan Canyon","Alae","Dahilayan" ,"Dalirig" ,"Damilag" ,"Dicklum","Guilang-Guilang","Kalugmanan",
+  "Lindaban" ,"Lingion","Lunocan","Maluko", "Mambatangan" ,"Mampayag", "Minsuro" , "Mantibugao", 
+  "San Miguel" , "Sankanan" ,"Santiago" , "Santo Niño" , "Tankulan (Pob.)","Ticala"
+  
 ];
 
 const TraineeList: React.FC = () => {
