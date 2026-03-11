@@ -21,17 +21,17 @@ import {
   constructOutline 
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 const Menu: React.FC = () => {
   const [width, setWidth] = useState(280); 
   const [isResizing, setIsResizing] = useState(false);
   const history = useHistory();
 
-  const handleLogout = () => {
-    // I-clear ang session kung naa man gani (e.g., localStorage.clear())
-    // Unya i-redirect pabalik sa login screen
-    history.replace('/login');
-  };
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/monitoring/login";
+};
 
   const startResizing = (e: React.MouseEvent) => {
     e.preventDefault();

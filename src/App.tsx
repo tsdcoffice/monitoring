@@ -48,27 +48,22 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
       <IonRouterOutlet id="main">
 
         {/* Default redirect */}
-        <Route exact path="/">
-          <Redirect to="/login" />
-        </Route>
-
-        <Route exact path="/login" component={Login} />
-        <Route exact path="/dashboard" component={Dashboard} />
-        <Route exact path="/profiling" component={Profiling} />
-        <Route exact path="/account" component={UserAccount} />
-        <Route exact path="/scholarship" component={Scholarship}/>
-        <Route exact path="/students" component={StudentList}/>
-        <Route exact path="/training" component={Training}/>
-        <Route exact path="/trainees/:slug" component={TraineeList}/>
-        <Route exact path="/student-profile" component={StudentProfile} />
-        <Route exact path="/reset-password" component={ResetPassword} />
-        <Route path="/update-student/:id" component={UpdateStudent} exact />
-        <Route path="/batch/:slug" component={BatchList} exact />
-        <Route path="/trainees/:slug/:batch" component={TraineeList} exact />
+        <Route exact path="/"> {session ? <Redirect to="/dashboard" /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/login"> {session ? <Redirect to="/dashboard" /> : <Login />} </Route>
+        <Route exact path="/dashboard"> {session ? <Dashboard /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/profiling">  {session ? <Profiling /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/account">  {session ? <UserAccount /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/scholarship">  {session ? <Scholarship /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/students">  {session ? <StudentList /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/training">  {session ? <Training /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/student-profile">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/update-student/:id">  {session ? <UpdateStudent /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/batch/:slug">  {session ? <BatchList /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/trainees/:slug"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
 
         {/* Profiling children */}
-        <Route exact path="/profiling/scholarship" component={StudentProfile} />
-        <Route exact path="/profiling/training" component={TraineeProfile} />
+        <Route exact path="/profiling/scholarship">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>
+        <Route exact path="/profiling/training">  {session ? <TraineeProfile /> : <Redirect to="/login" />} </Route>
 
       </IonRouterOutlet>
     </IonSplitPane>
