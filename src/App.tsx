@@ -48,7 +48,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
       <IonRouterOutlet id="main">
 
         {/* Default redirect */}
-        <Route exact path="/"> <Redirect to="/login" /> </Route>
+        <Route exact path="/">  {session ? <Redirect to="/dashboard" /> : <Redirect to="/login" />} </Route>
         <Route exact path="/login"> {session ? <Redirect to="/dashboard" /> : <Login />} </Route>
         <Route exact path="/dashboard"> {session ? <Dashboard /> : <Redirect to="/login" />} </Route>
         <Route exact path="/profiling">  {session ? <Profiling /> : <Redirect to="/login" />} </Route>
@@ -73,6 +73,13 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
 const App: React.FC = () => {
   const [session, setSession] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+
+  // Restore redirect from 404
+  const query = new URLSearchParams(window.location.search);
+  const redirect = query.get("redirect");
+  if (redirect) {
+    window.history.replaceState(null, "", redirect);
+  }
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
