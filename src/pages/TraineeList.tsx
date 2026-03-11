@@ -651,6 +651,7 @@ const saveBatchDetails = async () => {
   }
 };
 
+  //word
   const downloadWord = async () => {
     const generatedDate = new Date().toLocaleDateString();
 
