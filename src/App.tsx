@@ -82,21 +82,29 @@ const App: React.FC = () => {
   }
 
   React.useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
+    setLoading(false);
+  });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      setSession(session);
+    }
+  );
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  // Logout when tab closes
+  const handleTabClose = () => {
+    supabase.auth.signOut();
+  };
+
+  window.addEventListener("beforeunload", handleTabClose);
+
+  return () => {
+    listener.subscription.unsubscribe();
+    window.removeEventListener("beforeunload", handleTabClose);
+  };
+}, []);
 
   if (loading) {
   return <IonApp><IonContent>Loading...</IonContent></IonApp>;
