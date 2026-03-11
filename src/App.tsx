@@ -75,11 +75,10 @@ const App: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
 
   // Restore redirect from 404
-  const query = new URLSearchParams(window.location.search);
-  const redirect = query.get("redirect");
-  if (redirect) {
-    window.history.replaceState(null, "", redirect);
-  }
+ const redirect = window.location.search.replace(/^\?\//, '');
+if (redirect) {
+  window.history.replaceState(null, "", "/" + redirect);
+}
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
