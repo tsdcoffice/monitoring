@@ -82,7 +82,7 @@ const StudentList: React.FC = () => {
   const [searchText, setSearchText] = useState(searchQuery || '');
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
-  const [sortOption, setSortOption] = useState('az');
+  const [sortOption, setSortOption] = useState('date_desc');
   const [showFilter, setShowFilter] = useState(false);
   const [filterType, setFilterType] = useState('');
   const [selectedIP, setSelectedIP] = useState('');
@@ -212,25 +212,23 @@ if (data) {
 }
 
     switch (sortOption) {
-      case 'az':
-        data.sort((a, b) => a.lastname.localeCompare(b.lastname));
-        break;
-      case 'za':
-        data.sort((a, b) => b.lastname.localeCompare(a.lastname));
-        break;
-      case 'date_desc':
-        data.sort((a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
-        );
-        break;
-      case 'date_asc':
-        data.sort((a, b) =>
-          new Date(a.created_at).getTime() -
-          new Date(b.created_at).getTime()
-        );
-        break;
-    }
+  case 'date_desc': // Kini ang "Newest"
+    data.sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    break;
+  case 'date_asc': // Kini ang "Oldest"
+    data.sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    break;
+  case 'az':
+    data.sort((a, b) => a.lastname.localeCompare(b.lastname));
+    break;
+  case 'za':
+    data.sort((a, b) => b.lastname.localeCompare(a.lastname));
+    break;
+}
 
     setFilteredStudents(data);
   };
@@ -248,7 +246,7 @@ if (data) {
   setSelectedCourse('');
   setSelectedYear('');
   setSelectedStatus('');
-  setSortOption('az');
+  setSortOption('date_desc');
   setSelectedStudents([]); // clear selected rows
   setShowSelect(false); // hide select column
   setShowFilter(false);
@@ -817,10 +815,10 @@ const downloadExcel = () => {
               value={sortOption}
               onIonChange={e => setSortOption(e.detail.value)}
             >
-              <IonSelectOption value="az">A to Z</IonSelectOption>
-              <IonSelectOption value="za">Z to A</IonSelectOption>
               <IonSelectOption value="date_desc">Newest</IonSelectOption>
               <IonSelectOption value="date_asc">Oldest</IonSelectOption>
+              <IonSelectOption value="az">A to Z</IonSelectOption>
+              <IonSelectOption value="za">Z to A</IonSelectOption>
             </IonSelect>
 
           </div>
@@ -1040,7 +1038,7 @@ const downloadExcel = () => {
 )}
 
         <IonGrid>
-          <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
+          <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000', background: '#10377a', color: '#ffffff'}}>
             {showSelect && <IonCol size="1">Select</IonCol>}
             <IonCol size="0.5">No.</IonCol>
             <IonCol size="1.2">Barangay</IonCol>
