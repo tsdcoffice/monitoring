@@ -64,6 +64,7 @@ const StudentProfile: React.FC = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [scholarshipTypes, setScholarshipTypes] = useState<ScholarshipType[]>([]);
   const [showToast, setShowToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchScholarshipTypes();
@@ -99,6 +100,12 @@ const StudentProfile: React.FC = () => {
 
   const saveStudent = async () => {
 
+  if (isSaving) return; // ✅ prevents double click
+
+  setIsSaving(true);
+
+  try {
+
     if (
       !formData.lastname ||
       !formData.firstname ||
@@ -119,15 +126,22 @@ const StudentProfile: React.FC = () => {
 
     const { error } = await supabase.from('students').insert([formData]);
 
-    if (error) {
-      console.error(error);
-      alert("Error saving student.");
-      return;
-    }
+    if (error) throw error;
 
     setShowToast(true);
     setFormData(initialFormState);
-  };
+
+  } catch (err:any) {
+
+    console.error(err);
+    alert("Error saving student.");
+
+  } finally {
+
+    setIsSaving(false); // ✅ unlock button
+
+  }
+};
 
   return (
     <IonPage>
@@ -282,8 +296,7 @@ const StudentProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        <IonButton expand="block" onClick={saveStudent} className="ion-margin-top">
-          Save Student
+        <IonButton expand="block" onClick={saveStudent} disabled={isSaving} className="ion-margin-top"> {isSaving ? "Saving..." : "Save Student"}
         </IonButton>
 
         <IonToast

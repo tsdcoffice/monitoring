@@ -74,6 +74,7 @@ const TraineeProfile: React.FC = () => {
 
   const [formData, setFormData] = useState(initialFormState);
   const [showToast, setShowToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const firstRef = useRef<HTMLIonInputElement>(null);
   const middleRef = useRef<HTMLIonInputElement>(null);
@@ -99,20 +100,26 @@ const TraineeProfile: React.FC = () => {
 
   const saveTrainee = async () => {
 
-    const requiredFields = [
-  formData.lastname,
-  formData.firstname,
-  formData.gender,
-  formData.barangay,
-  formData.educational_attainment,
-  formData.course,
-  formData.batch
-];
+  if (isSaving) return; // ✅ prevents double click
 
-if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
-  alert("Please fill in all required fields.");
-  return;
-}
+  setIsSaving(true);
+
+  try {
+
+    const requiredFields = [
+      formData.lastname,
+      formData.firstname,
+      formData.gender,
+      formData.barangay,
+      formData.educational_attainment,
+      formData.course,
+      formData.batch
+    ];
+
+    if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
+      alert("Please fill in all required fields.");
+      return;
+    }
 
     if (formData.is_ip && !formData.ip_group) {
       alert("Please select IP Tribe.");
@@ -145,14 +152,21 @@ if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
       }
     ]);
 
-    if (error) {
-      alert(error.message);
-      return;
-    }
+    if (error) throw error;
 
     setShowToast(true);
     setFormData(initialFormState);
-  };
+
+  } catch (err:any) {
+
+    alert(err.message);
+
+  } finally {
+
+    setIsSaving(false); // ✅ unlock button
+
+  }
+};
 
   return (
     <IonPage>
@@ -336,8 +350,7 @@ if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
 />
 </IonItem>
 
-        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
-          Save Trainee
+        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} disabled={isSaving} className="ion-margin-top">  {isSaving ? "Saving..." : "Save Trainee"}
         </IonButton>
 
         <IonToast
