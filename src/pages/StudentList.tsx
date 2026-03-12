@@ -35,7 +35,7 @@ import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from "xlsx-js-style";
-import { Document, Packer, Paragraph, Table, TableRow, TableCell, AlignmentType, HeadingLevel, PageOrientation } from "docx";
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, AlignmentType, HeadingLevel, PageOrientation, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { ImageRun } from "docx";
@@ -287,7 +287,7 @@ if (data) {
           @page {
             /* Kini mopugos sa printer settings nga walay extra margin */
               margin: 5mm; 
-              size: portrait;
+              
           }
           body {
             margin: 0;
@@ -322,10 +322,10 @@ if (data) {
 
         .col-no { width: 3%; }
         .col-brgy { width: 8%; }
-        .col-name { width: 13%; }
-        .col-school { width: 15%; }
+        .col-name { width: 11%; }
+        .col-school { width: 12%; }
         .col-course { width: 15%; }
-        .col-ip { width: 3%;}
+        .col-ip { width: 6%;}
         .col-type { width: 5%;}
         .col-remarks { width: 8%;}
         .col-year { width: 6%;}
@@ -375,7 +375,12 @@ if (data) {
                 <td class="text-left">${s.school}</td>
                 <td class="text-left">${s.course || '-'}</td>
                 <td>${s.year_level || '-'}</td>
-                <td>${s.is_ip ? 'IP' : 'Not IP'}</td>
+                <td>
+                  ${s.is_ip 
+                  ? `IP <br/> <small style="font-size: 7px; font-style: italic;">
+                  (${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : '-'})` 
+                  : 'Not IP'}
+                  </td>
                 <td>${s.scholarship_types?.name || '-'}</td>
                 <td class="${statusClass}">
                   ${s.status || 'On-going'}
@@ -429,7 +434,9 @@ const handleDownloadPDF = () => {
     s.school,
     s.course || '-',
     s.year_level || '-',
-    s.is_ip ? 'IP' : 'Not IP',
+    s.is_ip 
+    ? `IP\n(${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : '-'})` 
+    : 'Not IP',
     s.scholarship_types?.name || '-',
     s.status || 'On-going',
     s.remarks || '-' // Diri ang remarks value
@@ -520,6 +527,16 @@ const updateYearLevel = async (studentId: string, year: string) => {
   fetchStudents();
 };
 
+const updateTribe = async (studentId: string, tribe: string) => {
+  await supabase
+    .from('students')
+    .update({ ip_group: tribe })
+    .eq('id', studentId);
+  
+  // Optional: Refresh local state para makita ang update
+  fetchStudents();
+};
+
 const handleBulkUpdate = async () => {
 
   if (!bulkYear || selectedStudents.length === 0) return;
@@ -547,7 +564,7 @@ const downloadExcel = () => {
     School: s.school,
     Course: s.course || "-",
     Year: s.year_level || "-",
-    IP: s.is_ip ? "IP" : "Not IP",
+    IP: s.is_ip ? `IP (${s.ip_group || "-"})` : "Not IP",
     Type: s.scholarship_types?.name || "-",
     Status: s.status || "On-going",
     Remarks: s.remarks || "-"
@@ -649,6 +666,7 @@ const downloadExcel = () => {
 
     // DATA ROWS
     ...filteredStudents.map((s, i) =>
+
       new TableRow({
         children: [
           new TableCell({ children: [new Paragraph(String(i + 1))] }),
@@ -658,9 +676,34 @@ const downloadExcel = () => {
           new TableCell({ children: [new Paragraph(s.school)] }),
           new TableCell({ children: [new Paragraph(s.course || "-")] }),
           new TableCell({ children: [new Paragraph(s.year_level || "-")] }),
-          new TableCell({ children: [new Paragraph(s.is_ip ? "IP" : "Not IP")] }),
+          new TableCell({ 
+            children: s.is_ip ? [
+              new Paragraph({ text: "IP", alignment: AlignmentType.CENTER }),
+              new Paragraph({ 
+                text: `(${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : "-"})`,
+                alignment: AlignmentType.CENTER
+              })
+            ] : [new Paragraph({ text: "Not IP", alignment: AlignmentType.CENTER })]
+          }),
           new TableCell({ children: [new Paragraph(s.scholarship_types?.name || "-")] }),
-          new TableCell({ children: [new Paragraph(s.status || "On-going")] }),
+          new TableCell({
+  children: [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: s.status || "On-going",
+          // Dinhi i-check ang status para sa kolor sa font
+          color: (s.status?.toLowerCase() === "graduated") ? "28A745" : // green
+                 (s.status?.toLowerCase() === "stopped") ? "FF0000" :   // red
+                 (s.status?.toLowerCase() === "on-going") ? "808080" :  // gray
+                 "000000", // Default: Itom
+          bold: true, // Mas maayo i-bold para klaro ang kolor inig print
+        }),
+      ],
+    }),
+  ],
+}),
           new TableCell({ children: [new Paragraph(s.remarks || "-")] })
         ]
       })
@@ -730,7 +773,7 @@ const downloadExcel = () => {
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
             <IonButton onClick={handleBack}>
               <IonIcon icon={arrowBackOutline}/>
@@ -999,17 +1042,17 @@ const downloadExcel = () => {
         <IonGrid>
           <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
             {showSelect && <IonCol size="1">Select</IonCol>}
-            <IonCol size="1">No.</IonCol>
-            <IonCol>Barangay</IonCol>
-            <IonCol>Name</IonCol>
-            <IonCol>Gender</IonCol>
-            <IonCol>School</IonCol>
-            <IonCol>Course</IonCol>
-            <IonCol>Year</IonCol>
-            <IonCol>IP</IonCol>
-            <IonCol>Type</IonCol>
-            <IonCol>Status</IonCol>
-            <IonCol>Action</IonCol>
+            <IonCol size="0.5">No.</IonCol>
+            <IonCol size="1.2">Barangay</IonCol>
+            <IonCol size="1.5">Name</IonCol>
+            <IonCol size="1">Gender</IonCol>
+            <IonCol size="1.4">School</IonCol>
+            <IonCol size="1.4">Course</IonCol>
+            <IonCol size="1.3">Year</IonCol>
+            <IonCol size="1">IP</IonCol>
+            <IonCol size="1">Type</IonCol>
+            <IonCol size="1">Status</IonCol>
+            <IonCol size="0.5">Action</IonCol>
           </IonRow>
 
           {filteredStudents.map((student, index) => (
@@ -1025,13 +1068,13 @@ const downloadExcel = () => {
   />
 </IonCol>
 )}
-              <IonCol size="1">{index + 1}</IonCol>
-              <IonCol>{student.barangay}</IonCol>
-              <IonCol>{student.lastname}, {student.firstname} {student.middlename}</IonCol>
-              <IonCol>{student.gender}</IonCol>
-              <IonCol>{student.school}</IonCol>
-              <IonCol>{student.course || '-'}</IonCol>
-              <IonCol>
+              <IonCol size="0.5">{index + 1}</IonCol>
+              <IonCol size="1.2"  >{student.barangay}</IonCol>
+              <IonCol size="1.5">{student.lastname}, {student.firstname} {student.middlename}</IonCol>
+              <IonCol size="1">{student.gender}</IonCol>
+              <IonCol size="1.4">{student.school}</IonCol>
+              <IonCol size="1.4">{student.course || '-'}</IonCol>
+              <IonCol size="1.3">
 
 {student.status === 'Graduated' ? (
 
@@ -1066,10 +1109,21 @@ const downloadExcel = () => {
 )}
 
 </IonCol>
-              <IonCol>{student.is_ip ? 'IP' : 'Not IP'}</IonCol>
-              <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
+              <IonCol size="1">
+  {student.is_ip ? (
+    <div>
+      <IonText>IP</IonText>
+      <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
+        {student.ip_group || 'No Tribe'}
+      </div>
+    </div>
+  ) : (
+    <IonText>Not IP</IonText>
+  )}
+</IonCol>
+              <IonCol size="1">{student.scholarship_types?.name || '-'}</IonCol>
               {/* STATUS COLUMN */}
-              <IonCol>
+              <IonCol size="1">
       <IonText color={getStatusColor(student.status)}>
         {student.status || 'On-going'}
       </IonText>
@@ -1083,11 +1137,12 @@ const downloadExcel = () => {
     </IonCol>
 
     {/* UPDATE BUTTON */}
-    <IonCol>
+    <IonCol size="0.5">
       <IonButton
         size="small"
         color="primary"
         onClick={() => handleUpdate(student.id)}
+        style={{ fontSize: '10px', height: '25px' }}
       >
         Update
       </IonButton>

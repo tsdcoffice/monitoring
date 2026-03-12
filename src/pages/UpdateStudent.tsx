@@ -26,6 +26,8 @@ const barangays = [
   "Tankulan (Pob.)","Ticala"
 ];
 
+const tribes = ["BUKIDNON", "HIGAONON", "MANOBO", "MATIGSALUG", "TALAANDIG", "TIGWAHANON", "UMAYAMNON"];
+
 interface Params {
   id: string;
 }
@@ -48,7 +50,9 @@ const UpdateStudent: React.FC = () => {
   const [status, setStatus] = useState('');
   const [remarks, setRemarks] = useState('');
   const inputStyle = { textTransform: 'uppercase' as const };
+  const [ipTribe, setIpTribe] = useState('');
 
+  const tribeSelectRef = useRef<HTMLIonSelectElement>(null);
   const lastRef = useRef<HTMLIonInputElement>(null);
   const middleRef = useRef<HTMLIonInputElement>(null);
   const schoolRef = useRef<HTMLIonInputElement>(null);
@@ -94,6 +98,7 @@ const UpdateStudent: React.FC = () => {
       setCourse(data.course || '');
       setYearLevel(data.year_level || '1st Year');
       setIsIP(data.is_ip);
+      setIpTribe(data.ip_group || '');
       setStatus(data.status || 'On-going');
       
       // 2. I-LOAD ANG REMARKS GIKAN SA DATABASE
@@ -114,6 +119,7 @@ const UpdateStudent: React.FC = () => {
         course,
         year_level: yearLevel,
         is_ip: isIP,
+        ip_group: isIP ? ipTribe : null,
         status,
         // 3. I-SAVE ANG REMARKS KUNG STOPPED, ELSE NULL
         remarks: status === 'Stopped' ? remarks : null
@@ -189,12 +195,43 @@ const UpdateStudent: React.FC = () => {
         </IonItem>
 
         <IonItem>
-          <IonLabel>IP Status</IonLabel>
-          <IonSelect interface="popover" value={isIP ? 'IP' : 'NOT_IP'} onIonChange={e => setIsIP(e.detail.value === 'IP')}>
-            <IonSelectOption value="IP">IP</IonSelectOption>
-            <IonSelectOption value="NOT_IP">Not IP</IonSelectOption>
-          </IonSelect>
-        </IonItem>
+  <IonLabel>IP Status</IonLabel>
+  <IonSelect 
+    interface="popover" 
+    value={isIP ? 'IP' : 'NOT_IP'} 
+    onIonChange={e => {
+      const val = e.detail.value === 'IP';
+      setIsIP(val);
+      if (val) {
+        // Mo-pop up diretso ang listahan sa tribes human sa gamay nga delay
+        setTimeout(() => tribeSelectRef.current?.open(), 150);
+      } else {
+        setIpTribe(''); // I-reset kung dili IP
+      }
+    }}
+  >
+    <IonSelectOption value="IP">IP</IonSelectOption>
+    <IonSelectOption value="NOT_IP">Not IP</IonSelectOption>
+  </IonSelect>
+</IonItem>
+
+{/* KINI ANG MOGAWAS KON IP ANG NAPILI */}
+{isIP && (
+  <IonItem lines="full">
+    <IonLabel position="stacked">Select IP Tribe</IonLabel>
+    <IonSelect 
+      ref={tribeSelectRef}
+      interface="popover" // Walay OK ug Cancel buttons
+      value={ipTribe} 
+      
+      onIonChange={e => setIpTribe(e.detail.value)}
+    >
+      {tribes.map(t => (
+        <IonSelectOption key={t} value={t}>{t}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
 
         <IonItem>
           <IonLabel>Status</IonLabel>
