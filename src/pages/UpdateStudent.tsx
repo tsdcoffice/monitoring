@@ -15,7 +15,7 @@ import {
 } from '@ionic/react';
 
 import { useParams, useHistory } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
 const barangays = [
@@ -46,9 +46,32 @@ const UpdateStudent: React.FC = () => {
   const [yearLevel, setYearLevel] = useState('');
   const [isIP, setIsIP] = useState(false);
   const [status, setStatus] = useState('');
-  
-  // 1. I-ADD ANG STATE PARA SA REMARKS
   const [remarks, setRemarks] = useState('');
+  const inputStyle = { textTransform: 'uppercase' as const };
+
+  const lastRef = useRef<HTMLIonInputElement>(null);
+  const middleRef = useRef<HTMLIonInputElement>(null);
+  const schoolRef = useRef<HTMLIonInputElement>(null);
+  const courseRef = useRef<HTMLIonInputElement>(null);
+  const remarksRef = useRef<HTMLIonInputElement>(null);
+
+  // Helper para sa Auto-Uppercase
+  const handleInput = (setter: any, val: string) => {
+    setter(val.toUpperCase());
+  };
+
+  // Helper para sa "Enter" key logic
+  const handleKeyDown = (e: any, nextRef?: any) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (nextRef && nextRef.current) {
+        nextRef.current.setFocus();
+      } else {
+        // Kung wala nay sunod nga field, i-save na ang data
+        updateStudent();
+      }
+    }
+  };
 
   useEffect(() => {
     fetchStudent();
@@ -114,17 +137,17 @@ const UpdateStudent: React.FC = () => {
       <IonContent className="ion-padding">
         <IonItem>
           <IonLabel position="stacked">First Name</IonLabel>
-          <IonInput value={firstname} onIonInput={e => setFirstname(e.detail.value!)} />
+          <IonInput value={firstname} style={inputStyle} onIonInput={e => setFirstname(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, lastRef)}/>
         </IonItem>
 
         <IonItem>
           <IonLabel position="stacked">Last Name</IonLabel>
-          <IonInput value={lastname} onIonInput={e => setLastname(e.detail.value!)} />
+          <IonInput ref={lastRef} value={lastname} style={inputStyle} onIonInput={e => setLastname(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, middleRef)}/>
         </IonItem>
 
         <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
-          <IonInput value={middlename} onIonInput={e => setMiddlename(e.detail.value!)} />
+          <IonInput ref={middleRef} value={middlename} style={inputStyle} onIonInput={e => setMiddlename(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, schoolRef)}/>
         </IonItem>
 
         <IonItem>
@@ -146,12 +169,12 @@ const UpdateStudent: React.FC = () => {
 
         <IonItem>
           <IonLabel position="stacked">School</IonLabel>
-          <IonInput value={school} onIonInput={e => setSchool(e.detail.value!)} />
+          <IonInput ref={schoolRef} value={school} style={inputStyle} onIonInput={e => setSchool(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, courseRef)}/>
         </IonItem>
 
         <IonItem>
           <IonLabel position="stacked">Course</IonLabel>
-          <IonInput value={course} onIonInput={e => setCourse(e.detail.value!)} />
+          <IonInput ref={courseRef} value={course} style={inputStyle} onIonInput={e => setCourse(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, status === 'Stopped' ? remarksRef : undefined)}/>
         </IonItem>
 
         <IonItem>
@@ -187,9 +210,11 @@ const UpdateStudent: React.FC = () => {
           <IonItem lines="full">
             <IonLabel position="stacked" color="danger">Reason for Stopping (Remarks)</IonLabel>
             <IonInput 
+              ref={remarksRef}
               value={remarks} 
               placeholder="Enter reason here..." 
               onIonInput={e => setRemarks(e.detail.value!)} 
+              onKeyDown={(e) => handleKeyDown(e)} // Walay nextRef, mo-trigger sa updateStudent()
             />
           </IonItem>
         )}
