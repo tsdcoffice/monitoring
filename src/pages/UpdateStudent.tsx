@@ -19,7 +19,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
 const barangays = [
-  "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Diclum",
+  "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Dicklum",
   "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
   "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
   "San Miguel","Sankanan","Santiago","Santo Niño",

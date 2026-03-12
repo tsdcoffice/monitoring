@@ -60,15 +60,17 @@ const handleUpdatePassword = async () => {
 };
 
   useEffect(() => {
-  const checkSession = async () => {
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error || !data.session) {
-      setError("Invalid or expired reset link.");
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      // User clicked the link, we are now in 'recovery mode'
+      console.log("Recovery mode active");
+    } else if (event === "SIGNED_IN") {
+      // Supabase has successfully authenticated the user via the link
+      setError(""); 
     }
-  };
+  });
 
-  checkSession();
+  return () => subscription.unsubscribe();
 }, []);
 
   return (

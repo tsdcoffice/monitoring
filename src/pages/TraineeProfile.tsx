@@ -74,6 +74,7 @@ const TraineeProfile: React.FC = () => {
 
   const [formData, setFormData] = useState(initialFormState);
   const [showToast, setShowToast] = useState(false);
+   const [isSaving, setIsSaving] = useState(false);
 
   const firstRef = useRef<HTMLIonInputElement>(null);
   const middleRef = useRef<HTMLIonInputElement>(null);
@@ -97,61 +98,69 @@ const TraineeProfile: React.FC = () => {
     }
   };
 
+  // ✅ WRAP THE LOGIC IN THIS FUNCTION
   const saveTrainee = async () => {
+    if (isSaving) return;
 
     const requiredFields = [
-  formData.lastname,
-  formData.firstname,
-  formData.gender,
-  formData.barangay,
-  formData.educational_attainment,
-  formData.course,
-  formData.batch
-];
+      formData.lastname,
+      formData.firstname,
+      formData.gender,
+      formData.barangay,
+      formData.educational_attainment,
+      formData.course,
+      formData.batch
+    ];
 
-if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
-  alert("Please fill in all required fields.");
-  return;
-}
+    if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
+      alert("Please fill in all required fields.");
+      return;
+    }
 
     if (formData.is_ip && !formData.ip_group) {
       alert("Please select IP Tribe.");
       return;
     }
 
-    const { data: trainingData, error: trainingError } = await supabase
-      .from('training_types')
-      .select('id')
-      .eq('name', formData.course)
-      .single();
+    setIsSaving(true);
 
-    if (trainingError || !trainingData) {
-      alert("Training type not found in database.");
-      return;
-    }
+    try {
+      const { data: trainingData, error: trainingError } = await supabase
+        .from('training_types')
+        .select('id')
+        .eq('name', formData.course)
+        .single();
 
-    const { error } = await supabase.from('trainees').insert([
-      {
-        lastname: formData.lastname,
-        firstname: formData.firstname,
-        middlename: formData.middlename,
-        gender: formData.gender,
-        barangay: formData.barangay,
-        is_ip: formData.is_ip,
-        ip_group: formData.is_ip ? formData.ip_group : null,
-        educational_attainment: formData.educational_attainment,
-        training_type_id: trainingData.id,
-        batch: formData.batch
+      if (trainingError || !trainingData) {
+        alert("Training type not found in database.");
+        return;
       }
-    ]);
 
-    if (error) {
-      alert(error.message);
-      return;
+      const { error } = await supabase.from('trainees').insert([
+        {
+          lastname: formData.lastname,
+          firstname: formData.firstname,
+          middlename: formData.middlename,
+          gender: formData.gender,
+          barangay: formData.barangay,
+          is_ip: formData.is_ip,
+          ip_group: formData.is_ip ? formData.ip_group : null,
+          educational_attainment: formData.educational_attainment,
+          training_type_id: trainingData.id,
+          batch: formData.batch
+        }
+      ]);
+
+      if (error) throw error;
+
+      setShowToast(true);
+      setFormData(initialFormState); // Optional: clear form after success
+
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSaving(false);
     }
-
-    setShowToast(true);
-    setFormData(initialFormState);
   };
 
   return (
@@ -336,8 +345,7 @@ if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
 />
 </IonItem>
 
-        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} className="ion-margin-top">
-          Save Trainee
+        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} disabled={isSaving} className="ion-margin-top">  {isSaving ? "Saving..." : "Save Trainee"}
         </IonButton>
 
         <IonToast

@@ -48,6 +48,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
       <IonRouterOutlet id="main">
 
         {/* Default redirect */}
+        <Route exact path="/reset-password" component={ResetPassword} />
         <Route exact path="/">  {session ? <Redirect to="/dashboard" /> : <Redirect to="/login" />} </Route>
         <Route exact path="/login"> {session ? <Redirect to="/dashboard" /> : <Login />} </Route>
         <Route exact path="/dashboard"> {session ? <Dashboard /> : <Redirect to="/login" />} </Route>
