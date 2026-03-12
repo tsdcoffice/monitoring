@@ -137,7 +137,8 @@ const BatchList:React.FC = () => {
 <IonPage>
 
 <IonHeader>
-<IonToolbar color="primary">
+<IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
+  
 
 <IonButtons slot="start">
 <IonButton routerLink="/training">
@@ -158,44 +159,42 @@ const BatchList:React.FC = () => {
 <IonRow>
 
 {batches.map(b=>(
-
 <IonCol size="12" sizeMd="4" key={b.batch}>
 
 <IonCard
-button
-onClick={()=>openBatch(b.batch)}
-style={{
-textAlign:"center",
-background:"linear-gradient(135deg,#6367FF,#8A8EFF)",
-color:"#fff",
-borderRadius:"20px",
-boxShadow:"0 4px 10px rgba(0,0,0,0.2)"
-}}
+  button
+  onClick={()=>openBatch(b.batch)}
+  style={{
+    backgroundColor: '#10377a',      // Solid Blue Background
+    color: '#ffffff',               // White Text
+    borderRadius: '12px',           // Rounded Corners
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', // Shadow effect
+    borderLeft: '5px solid #d68718', // Ang Orange accent sa kilid
+    margin: '10px',
+    textAlign: 'center'
+  }}
 >
 
 <IonCardHeader>
-<IonCardTitle>
-Batch {b.batch}
-</IonCardTitle>
+  <IonCardTitle style={{ color: '#ffffff' }}> {/* Siguroha nga puti ang Title */}
+    Batch {b.batch}
+  </IonCardTitle>
 </IonCardHeader>
 
 <IonCardContent>
-
-<h1 style={{margin:0,fontSize:"2rem"}}>
-{b.count}
-</h1>
-
-<p style={{margin:0}}>
-Trainees
-</p>
-
+  <h1 style={{margin:0, fontSize:"2.5rem", fontWeight: 'bold'}}>
+    {b.count}
+  </h1>
+  <p style={{margin:0, opacity: 0.9}}>
+    Trainees
+  </p>
 </IonCardContent>
 
 </IonCard>
 
 </IonCol>
-
 ))}
+
 
 </IonRow>
 </IonGrid>

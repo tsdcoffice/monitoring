@@ -34,6 +34,7 @@ interface Trainee {
   gender: string;
   educational_attainment: string;
   is_ip: boolean;
+  ip_group: string | null;
   created_at: string;
   training_type_id: string;
   batch: string;
@@ -475,7 +476,8 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
 
  const tableRows = trainees.map((t, index) => {
   const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
-  const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+  const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
+  const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
 
   return [
     index + 1,
@@ -483,7 +485,7 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
     `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
     t.gender,
     t.educational_attainment,
-    t.is_ip ? 'IP' : 'Not IP',
+    ipDisplay,
     new Date(t.created_at).toLocaleDateString(),
     trainingDisplay
   ];
@@ -537,8 +539,15 @@ const generateTableRows = () => {
 
   const rows = trainees.map((t, index) => {
     const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
-    // KINI ANG LOGIC: Kung wala gi-filter ang batch, ipakita ang Batch No. tapad sa Training Type
-    const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+    
+    // ADJUSTMENT HERE:
+    // Ipakita lang ang Batch No. kung wala ka sa sulod sa Batch Card (!batch)
+    // UG kung wala kay gi-filter nga specific batch (!selectedBatchFilter)
+    const trainingDisplay = (!batch && !selectedBatchFilter) 
+      ? `${typeName} (Batch ${t.batch})` 
+      : typeName;
+
+      const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';  
 
     return `
     <tr>
@@ -547,7 +556,7 @@ const generateTableRows = () => {
       <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
       <td>${t.gender}</td>
       <td>${t.educational_attainment}</td>
-      <td>${t.is_ip ? 'IP' : 'Not IP'}</td>
+      <td>${ipDisplay}</td>
       <td>${new Date(t.created_at).toLocaleDateString()}</td>
       <td>${trainingDisplay}</td>
     </tr>
@@ -566,9 +575,9 @@ const data = trainees.map((t, index) => {
     Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
     Gender: t.gender,
     Education: t.educational_attainment,
-    IP: t.is_ip ? "IP" : "Not IP",
+    "IP": t.is_ip ? `IP (${t.ip_group || 'N/A'})` : "Not IP",
     Date: new Date(t.created_at).toLocaleDateString(),
-    "Training Type": !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName
+    "Training Type": (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName
   };
 });
 
@@ -781,7 +790,8 @@ const saveBatchDetails = async () => {
 ...trainees.map((t, index) => {
   const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
   // I-append ang Batch No. kung wala'y filter
-  const trainingDisplay = !selectedBatchFilter ? `${typeName} (Batch ${t.batch})` : typeName;
+  const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
+  const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
 
   return new TableRow({
     children: [
@@ -790,7 +800,7 @@ const saveBatchDetails = async () => {
       new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
       new TableCell({children:[new Paragraph(t.gender)]}),
       new TableCell({children:[new Paragraph(t.educational_attainment)]}),
-      new TableCell({children:[new Paragraph(t.is_ip ? "IP" : "Not IP")]}),
+      new TableCell({children:[new Paragraph(ipDisplay)]}),
       new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
       new TableCell({children:[new Paragraph(trainingDisplay)]}) 
     ]
@@ -906,7 +916,7 @@ new Paragraph(" "),
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
               <IonButton
   fill="clear"
@@ -1153,13 +1163,16 @@ Save
                 </IonCol>
                 <IonCol>{t.gender}</IonCol>
                 <IonCol>{t.educational_attainment}</IonCol>
-                <IonCol>{t.is_ip ? 'IP' : 'Not IP'}</IonCol>
+                <IonCol>
+                  {t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP'}
+                </IonCol>
                 <IonCol>
                   {new Date(t.created_at).toLocaleDateString()}
                 </IonCol>
                 <IonCol>
                   {trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
-                  {!selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
+                  {/* Ipakita lang ang batch number kung "All Trainees" ug walay filter */}
+                  {!batch && !selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
                 </IonCol>
               </IonRow>
             ))}
