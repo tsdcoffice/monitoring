@@ -281,6 +281,15 @@ const UserAccount: React.FC = () => {
           >
           {loading ? 'Updating...' : 'Update Account'}
         </IonButton>
+
+        <IonButton
+            expand="full"
+            shape="round"
+            routerLink="/history-logs"
+            style={{ marginTop: '10px', '--background': '#6c757d' }}
+          >
+          View History Logs
+        </IonButton>
         
         <IonAlert
           isOpen={showAlert}

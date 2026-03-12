@@ -35,7 +35,7 @@ import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from "xlsx-js-style";
-import { Document, Packer, Paragraph, Table, TableRow, TableCell } from "docx";
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, AlignmentType, HeadingLevel, PageOrientation, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { ImageRun } from "docx";
@@ -57,6 +57,7 @@ interface Student {
   created_at: string;
   scholarship_types: { name: string } | null;
   status: string | null;
+  remarks: string | null;
 }
 
 const barangays = [
@@ -253,131 +254,242 @@ if (data) {
   setShowFilter(false);
 };
 
-  /* PRINT */
+/* PRINT */
   const handlePrint = () => {
+    const printWindow = window.open('', '', 'width=1000,height=700');
+    if (!printWindow) return;
 
-  const printWindow = window.open('', '', 'width=1000,height=700');
-  if (!printWindow) return;
+    printWindow.document.write(generateHTMLTable(filteredStudents));
+    printWindow.document.close();
 
-  printWindow.document.write(generateHTMLTable(filteredStudents));
-  printWindow.document.close();
-
-  printWindow.onload = () => {
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
   };
-};
 
-  const generateHTMLTable = (data: Student[]) => `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial; padding:20px; }
-          table { width:100%; border-collapse:collapse; }
-          th,td { border:1px solid #000; padding:5px; font-size:12px; }
-          th { background:#10377a; color:white; font-weight:bold; }
-        </style>
-      </head>
-      <body>
+  const generateHTMLTable = (data: Student[]) => {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+  const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
 
-<div style="text-align:center; margin-bottom:15px;">
-  <img src="${headerImg}" style="width:100%; max-width:700px;" />
-</div>
-        <table>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Barangay</th>
-              <th>Name</th>
-              <th>Gender</th>
-              <th>School</th>
-              <th>Course</th>
-              <th>Year</th>
-              <th>IP</th>
-              <th>Type</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.map((s, i) => `
+  return `
+  <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 10px; }
+        .header-info { text-align: center; margin-bottom: 15px; }
+        .timestamp { text-align: center; font-size: 12px; margin-bottom: 15px; color: #1a1a1a; }
+
+        @media print {
+          @page {
+            /* Kini mopugos sa printer settings nga walay extra margin */
+              margin: 5mm; 
+              
+          }
+          body {
+            margin: 0;
+            padding: 0;
+          }
+        }
+        
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        
+        th, td { 
+          border: 1px solid #000; 
+          padding: 4px; 
+          font-size: 9px; 
+          word-wrap: break-word; 
+          text-align: center; 
+        }
+        
+        th { 
+          background: #10377a !important; 
+          color: white !important; 
+          font-weight: bold; 
+          text-transform: uppercase;
+          -webkit-print-color-adjust: exact;
+        }
+
+        .text-left { text-align: left; padding-left: 5px; }
+
+        /* Color classes para sa printing */
+        .status-graduated { color: green !important; -webkit-print-color-adjust: exact; font-size: 8px; }
+        .status-stopped { color: red !important; -webkit-print-color-adjust: exact; font-size: 8px; }
+        .status-ongoing { color: gray !important; -webkit-print-color-adjust: exact; font-size: 8px; }
+
+        .col-no { width: 3%; }
+        .col-brgy { width: 8%; }
+        .col-name { width: 11%; }
+        .col-school { width: 12%; }
+        .col-course { width: 15%; }
+        .col-ip { width: 6%;}
+        .col-type { width: 5%;}
+        .col-remarks { width: 8%;}
+        .col-year { width: 6%;}
+        
+        
+
+      </style>
+    </head>
+    <body>
+      <div class="header-info">
+        <img src="${headerImg}" style="width: 100%; max-width: 700px;" />
+        <h2 style="color: #07152e; margin: 10px 0;">${reportTitle}</h2>
+      </div>
+
+      <div class="timestamp">
+        Generated: ${dateStr}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="col-no">No.</th>
+            <th class="col-brgy">Barangay</th>
+            <th class="col-name">Name</th>
+            <th>Gender</th>
+            <th class="col-school">School</th>
+            <th class="col-course">Course</th>
+            <th class="col-year">Year</th>
+            <th class="col-ip">IP</th>
+            <th class="col-type">Type</th>
+            <th>Status</th>
+            <th class="col-remarks">Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((s, i) => {
+            // I-determine ang color class base sa status
+            const statusClass = (s.status || 'On-going') === 'Graduated' ? 'status-graduated' : 
+                               (s.status || 'On-going') === 'Stopped' ? 'status-stopped' : 'status-ongoing';
+            
+            return `
               <tr>
                 <td>${i + 1}</td>
                 <td>${s.barangay}</td>
-                <td>${s.lastname}, ${s.firstname}</td>
+                <td class="text-left">${s.lastname}, ${s.firstname} ${s.middlename}</td>
                 <td>${s.gender}</td>
-                <td>${s.school}</td>
-                <td>${s.course || '-'}</td>
+                <td class="text-left">${s.school}</td>
+                <td class="text-left">${s.course || '-'}</td>
                 <td>${s.year_level || '-'}</td>
-                <td>${s.is_ip ? 'IP' : 'Not IP'}</td>
+                <td>
+                  ${s.is_ip 
+                  ? `IP <br/> <small style="font-size: 7px; font-style: italic;">
+                  (${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : '-'})` 
+                  : 'Not IP'}
+                  </td>
                 <td>${s.scholarship_types?.name || '-'}</td>
-                <td style="
-  color: ${
-    (s.status || 'On-going') === 'Graduated'
-      ? 'green'
-      : (s.status || 'On-going') === 'Stopped'
-      ? 'red'
-      : 'gray'
-  };
-  font-weight: bold;
-">
-  ${s.status || 'On-going'}
-</td>
+                <td class="${statusClass}">
+                  ${s.status || 'On-going'}
+                </td>
+                <td class="text-left">${s.remarks || '-'}</td>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </body>
-    </html>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top: 15px; font-weight: bold; font-size: 11px;">
+        Total Records: ${data.length}
+      </div>
+    </body>
+  </html>
   `;
+};
 
   /* PDF */
-  const handleDownloadPDF = () => {
+const handleDownloadPDF = () => {
+  const pdf = new jsPDF('p', 'mm', 'a4');
 
-  const doc = new jsPDF();
-
-  // ADD HEADER IMAGE
   const img = new Image();
   img.src = headerImg;
 
-  doc.addImage(img, "PNG", 10, 5, 190, 25);
+  // 1. Header Image
+  pdf.addImage(img, "PNG", 10, 5, 190, 30);
 
-  const tableData = filteredStudents.map((s, i) => [
-  i + 1,
+  // 2. Report Title
+  pdf.setFontSize(16);
+  const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
+  pdf.text(reportTitle, 105, 40, { align: 'center' });
+
+  // 3. Date Generated
+  pdf.setFontSize(10);
+  pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
+
+  let startY = 55;
+
+  // 4. Columns (Gidugang ang Remarks sa tumoy)
+  const tableColumn = [
+    "No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
+  ];
+
+  // 5. Rows (Gidugang ang s.remarks)
+  const tableRows = filteredStudents.map((s, index) => [
+    index + 1,
     s.barangay,
-    `${s.lastname}, ${s.firstname}`,
+    `${s.lastname}, ${s.firstname} ${s.middlename || ''}`,
     s.gender,
     s.school,
     s.course || '-',
     s.year_level || '-',
-    s.is_ip ? 'IP' : 'Not IP',
+    s.is_ip 
+    ? `IP\n(${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : '-'})` 
+    : 'Not IP',
     s.scholarship_types?.name || '-',
-    s.status || 'On-going'
+    s.status || 'On-going',
+    s.remarks || '-' // Diri ang remarks value
   ]);
 
-  autoTable(doc, {
-    head: [['No.','Barangay','Name','Gender','School','Course','Year','IP','Type','Status']],
-    body: tableData,
-    startY: 35,
-    styles: { fontSize: 8 },
-
+  autoTable(pdf, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: startY,
+    showHead: "everyPage",
+    styles: {
+      fontSize: 6.5, // Gipagamyan pa gyud aron maigo ang 11 columns
+      halign: 'center',
+      valign: 'middle',
+      overflow: 'linebreak'
+    },
+    headStyles: {
+      fillColor: [16, 55, 122],
+      textColor: 255,
+      fontStyle: 'bold'
+    },
+    // I-manage ang gilapdon sa matag column
+    columnStyles: {
+      0: { cellWidth: 7 },  // No.
+      2: { halign: 'left', cellWidth: 22 }, // Name
+      4: { halign: 'left', cellWidth: 22 }, // School
+      5: { halign: 'left', cellWidth: 20 }, // Course
+      10: { halign: 'left', cellWidth: 18 } // Remarks
+    },
     didParseCell: function (data) {
+      if (data.section === 'body') {
+        const status = data.row.cells[9].raw; // Index 9 gihapon ang Status
 
-      if (data.column.index === 8) {
+        
 
-        const status = data.cell.raw;
-
-        if (status === 'Graduated') data.cell.styles.textColor = [0,128,0];
-        if (status === 'Stopped') data.cell.styles.textColor = [200,0,0];
-        if (status === 'On-going') data.cell.styles.textColor = [120,120,120];
-
-        data.cell.styles.fontStyle = 'bold';
+        // Text color styling para sa Status column
+        if (data.column.index === 9) {
+          if (status === 'Graduated') data.cell.styles.textColor = [0, 128, 0];
+          if (status === 'Stopped') data.cell.styles.textColor = [200, 0, 0];
+          data.cell.styles.fontStyle = 'bold';
+        }
       }
     }
   });
 
-  doc.save('scholarship_student_list.pdf');
+  // Optional: Add Total Records sa pinakaubos
+  const finalY = (pdf as any).lastAutoTable.finalY || startY;
+  pdf.setFontSize(10);
+  pdf.text(`Total Records: ${filteredStudents.length}`, 14, finalY + 10);
+
+  pdf.save('Scholarship_Student_List.pdf');
 };
+
 
     const getStatusColor = (status: string | null) => {
       if (status === 'Graduated') return 'success';
@@ -415,6 +527,16 @@ const updateYearLevel = async (studentId: string, year: string) => {
   fetchStudents();
 };
 
+const updateTribe = async (studentId: string, tribe: string) => {
+  await supabase
+    .from('students')
+    .update({ ip_group: tribe })
+    .eq('id', studentId);
+  
+  // Optional: Refresh local state para makita ang update
+  fetchStudents();
+};
+
 const handleBulkUpdate = async () => {
 
   if (!bulkYear || selectedStudents.length === 0) return;
@@ -430,171 +552,220 @@ const handleBulkUpdate = async () => {
   fetchStudents();
 };
 
-   const downloadExcel = () => {
 
+// EXCEL
+const downloadExcel = () => {
+  // 1. Data Mapping (11 Columns)
   const data = filteredStudents.map((s, i) => ({
-  No: i + 1,
+    "No.": i + 1,
     Barangay: s.barangay,
-    Name: `${s.lastname}, ${s.firstname}`,
+    Name: `${s.lastname}, ${s.firstname} ${s.middlename || ""}`,
     Gender: s.gender,
     School: s.school,
     Course: s.course || "-",
     Year: s.year_level || "-",
-    IP: s.is_ip ? "IP" : "Not IP",
+    IP: s.is_ip ? `IP (${s.ip_group || "-"})` : "Not IP",
     Type: s.scholarship_types?.name || "-",
-    Status: s.status || "On-going"
+    Status: s.status || "On-going",
+    Remarks: s.remarks || "-"
   }));
 
   const worksheet = XLSX.utils.json_to_sheet([]);
 
-XLSX.utils.sheet_add_aoa(worksheet, [
-  ["TSDC Scholarship Monitoring System"],
-  ["Scholarship Student List"],
-  []
-]);
+  // 2. Add Title & Generated Date
+  const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
+  
+  XLSX.utils.sheet_add_aoa(
+    worksheet,
+    [
+      [reportTitle], // Row 1
+      [`Generated: ${new Date().toLocaleDateString()} | ${new Date().toLocaleTimeString()}`], // Row 2
+      [] // Row 3 (Space)
+    ],
+    { origin: "A1" }
+  );
 
-XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
+  // 3. KINI ANG IMPORTANTE: Merging para ma-center ang Title (Column A to K)
+  // Index c:0 (Column A) hangtod c:10 (Column K)
+  worksheet["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }, // Merge Title (Row 1)
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }  // Merge Generated Date (Row 2)
+  ];
 
-  // Auto column width
+  // 4. Center Styling para sa Title ug Date
+  // Note: Kinahanglan ang xlsx-js-style library para mugana ang .s
+  if (worksheet["A1"]) {
+    worksheet["A1"].s = {
+      font: { bold: true, sz: 14 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+  if (worksheet["A2"]) {
+    worksheet["A2"].s = {
+      font: { sz: 10 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+
+  // 5. Header Row (Row 4)
+  const headerRow = ["No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"];
+  XLSX.utils.sheet_add_aoa(worksheet, [headerRow], { origin: "A4" });
+
+  // 6. Data Rows (Row 5 onwards)
+  XLSX.utils.sheet_add_json(worksheet, data, { origin: "A5", skipHeader: true });
+
+  // 7. Styling Table Header (Blue Style)
+  const headerStyle = {
+    fill: { fgColor: { rgb: "10377A" } },
+    font: { bold: true, color: { rgb: "FFFFFF" } },
+    alignment: { horizontal: "center", vertical: "center" }
+  };
+
+  for (let C = 0; C < headerRow.length; C++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 3, c: C });
+    if (worksheet[cellAddress]) worksheet[cellAddress].s = headerStyle;
+  }
+
+  // 8. Column Widths
   worksheet["!cols"] = [
-    { wch: 15 },
-    { wch: 25 },
-    { wch: 10 },
-    { wch: 25 },
-    { wch: 20 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 20 },
-    { wch: 15 }
+    { wch: 6 }, { wch: 18 }, { wch: 25 }, { wch: 10 }, { wch: 22 },
+    { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 12 }, { wch: 20 }
   ];
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Scholars");
 
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array"
-  });
-
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-
-  saveAs(blob, "Scholarship_Students.xlsx");
-
+  saveAs(blob, `Scholarship_Student_List.xlsx`);
   setShowDownload(false);
 };
 
+
+  //WORD
   const downloadWord = async () => {
+  const generatedDate = new Date().toLocaleDateString();
+  const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
 
   const rows = [
-
-    // HEADER
-   new TableRow({
-  children: [
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("No.")]
+    // TABLE HEADER
+    new TableRow({
+      tableHeader: true,
+      children: [
+        "No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
+      ].map(text => 
+        new TableCell({
+          shading: { fill: "10377A", type: ShadingType.CLEAR },
+          children: [new Paragraph({
+            text: text,
+            style: "whiteText", // Siguroha nga naay style para sa puti nga font
+          })]
+        })
+      )
     }),
 
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Barangay")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Name")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Gender")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("School")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Course")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Year")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("IP")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Type")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Status")]
-    })
-
-  ]
-}),
-
+    // DATA ROWS
     ...filteredStudents.map((s, i) =>
+
       new TableRow({
         children: [
-          new TableCell({children:[new Paragraph(String(i + 1))]}),
-          new TableCell({children:[new Paragraph(s.barangay)]}),
-          new TableCell({children:[new Paragraph(`${s.lastname}, ${s.firstname}`)]}),
-          new TableCell({children:[new Paragraph(s.gender)]}),
-          new TableCell({children:[new Paragraph(s.school)]}),
-          new TableCell({children:[new Paragraph(s.course || "-")]}),
-          new TableCell({children:[new Paragraph(s.year_level || "-")]}),
-          new TableCell({children:[new Paragraph(s.is_ip ? "IP" : "Not IP")]}),
-          new TableCell({children:[new Paragraph(s.scholarship_types?.name || "-")]}),
-          new TableCell({children:[new Paragraph(s.status || "On-going")]})
+          new TableCell({ children: [new Paragraph(String(i + 1))] }),
+          new TableCell({ children: [new Paragraph(s.barangay)] }),
+          new TableCell({ children: [new Paragraph(`${s.lastname}, ${s.firstname} ${s.middlename || ""}`)] }),
+          new TableCell({ children: [new Paragraph(s.gender)] }),
+          new TableCell({ children: [new Paragraph(s.school)] }),
+          new TableCell({ children: [new Paragraph(s.course || "-")] }),
+          new TableCell({ children: [new Paragraph(s.year_level || "-")] }),
+          new TableCell({ 
+            children: s.is_ip ? [
+              new Paragraph({ text: "IP", alignment: AlignmentType.CENTER }),
+              new Paragraph({ 
+                text: `(${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : "-"})`,
+                alignment: AlignmentType.CENTER
+              })
+            ] : [new Paragraph({ text: "Not IP", alignment: AlignmentType.CENTER })]
+          }),
+          new TableCell({ children: [new Paragraph(s.scholarship_types?.name || "-")] }),
+          new TableCell({
+  children: [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: s.status || "On-going",
+          // Dinhi i-check ang status para sa kolor sa font
+          color: (s.status?.toLowerCase() === "graduated") ? "28A745" : // green
+                 (s.status?.toLowerCase() === "stopped") ? "FF0000" :   // red
+                 (s.status?.toLowerCase() === "on-going") ? "808080" :  // gray
+                 "000000", // Default: Itom
+          bold: true, // Mas maayo i-bold para klaro ang kolor inig print
+        }),
+      ],
+    }),
+  ],
+}),
+          new TableCell({ children: [new Paragraph(s.remarks || "-")] })
         ]
       })
     )
   ];
 
   const doc = new Document({
-    sections: [
-      {
-        children: [
-
-  new Paragraph({
-    children: [
-      new ImageRun({
-        data: await fetch(headerImg).then(r => r.arrayBuffer()),
-        transformation: {
-          width: 600,
-          height: 120
+    sections: [{
+      properties: {
+        page: {
+          size: {
+            orientation: PageOrientation.LANDSCAPE, // Mas maayo ang Landscape kay 11 columns ni
+          },
         },
-        type: "png"
-      })
-    ]
-  }),
+      },
+      children: [
+        // 1. Header Image
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: await fetch(headerImg).then(r => r.arrayBuffer()),
+              transformation: {
+                width: 600,
+                height: 120
+              },
+              type: "png"
+            })
+          ],
+          alignment: AlignmentType.CENTER
+        }),
 
-  new Paragraph(" "),
+        new Paragraph(" "),
 
-  new Table({
-    rows
-  })
+        // 2. Centered Title
+        new Paragraph({
+          text: reportTitle,
+          heading: HeadingLevel.HEADING_1,
+          alignment: AlignmentType.CENTER
+        }),
 
-]
-      }
-    ]
+        // 3. Centered Generated Date
+        new Paragraph({
+          text: `Generated: ${generatedDate}`,
+          alignment: AlignmentType.CENTER
+        }),
+
+        new Paragraph(" "), // Space before table
+
+        // 4. Main Table
+        new Table({
+          rows,
+          width: {
+            size: 100,
+            type: "pct"
+          }
+        })
+      ]
+    }]
   });
 
   const blob = await Packer.toBlob(doc);
-
-  saveAs(blob, "Scholarship_Students.docx");
-
+  saveAs(blob, "Sholarship_Scholarship_List.docx");
   setShowDownload(false);
 };
 
@@ -602,7 +773,7 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
     <IonPage>
 
       <IonHeader>
-        <IonToolbar color="primary">
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
           <IonButtons slot="start">
             <IonButton onClick={handleBack}>
               <IonIcon icon={arrowBackOutline}/>
@@ -871,18 +1042,17 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
         <IonGrid>
           <IonRow style={{fontWeight:'bold',borderBottom:'2px solid #000'}}>
             {showSelect && <IonCol size="1">Select</IonCol>}
-            <IonCol size="1">No.</IonCol>
-            <IonCol>Barangay</IonCol>
-            <IonCol>Barangay</IonCol>
-            <IonCol>Name</IonCol>
-            <IonCol>Gender</IonCol>
-            <IonCol>School</IonCol>
-            <IonCol>Course</IonCol>
-            <IonCol>Year</IonCol>
-            <IonCol>IP</IonCol>
-            <IonCol>Type</IonCol>
-            <IonCol>Status</IonCol>
-            <IonCol>Action</IonCol>
+            <IonCol size="0.5">No.</IonCol>
+            <IonCol size="1.2">Barangay</IonCol>
+            <IonCol size="1.5">Name</IonCol>
+            <IonCol size="1">Gender</IonCol>
+            <IonCol size="1.4">School</IonCol>
+            <IonCol size="1.4">Course</IonCol>
+            <IonCol size="1.3">Year</IonCol>
+            <IonCol size="1">IP</IonCol>
+            <IonCol size="1">Type</IonCol>
+            <IonCol size="1">Status</IonCol>
+            <IonCol size="0.5">Action</IonCol>
           </IonRow>
 
           {filteredStudents.map((student, index) => (
@@ -898,13 +1068,13 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
   />
 </IonCol>
 )}
-              <IonCol size="1">{index + 1}</IonCol>
-              <IonCol>{student.barangay}</IonCol>
-              <IonCol>{student.lastname}, {student.firstname}</IonCol>
-              <IonCol>{student.gender}</IonCol>
-              <IonCol>{student.school}</IonCol>
-              <IonCol>{student.course || '-'}</IonCol>
-              <IonCol>
+              <IonCol size="0.5">{index + 1}</IonCol>
+              <IonCol size="1.2"  >{student.barangay}</IonCol>
+              <IonCol size="1.5">{student.lastname}, {student.firstname} {student.middlename}</IonCol>
+              <IonCol size="1">{student.gender}</IonCol>
+              <IonCol size="1.4">{student.school}</IonCol>
+              <IonCol size="1.4">{student.course || '-'}</IonCol>
+              <IonCol size="1.3">
 
 {student.status === 'Graduated' ? (
 
@@ -939,21 +1109,40 @@ XLSX.utils.sheet_add_json(worksheet, data, { origin: "A4" });
 )}
 
 </IonCol>
-              <IonCol>{student.is_ip ? 'IP' : 'Not IP'}</IonCol>
-              <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
+              <IonCol size="1">
+  {student.is_ip ? (
+    <div>
+      <IonText>IP</IonText>
+      <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
+        {student.ip_group || 'No Tribe'}
+      </div>
+    </div>
+  ) : (
+    <IonText>Not IP</IonText>
+  )}
+</IonCol>
+              <IonCol size="1">{student.scholarship_types?.name || '-'}</IonCol>
               {/* STATUS COLUMN */}
-              <IonCol>
+              <IonCol size="1">
       <IonText color={getStatusColor(student.status)}>
         {student.status || 'On-going'}
       </IonText>
+      
+      {/* KINI NGA PART ANG MO-DISPLAY SA REMARKS */}
+  {student.status === 'Stopped' && student.remarks && (
+    <div style={{ fontSize: '11px', color: '#eb445a', marginTop: '4px', fontStyle: 'italic' }}>
+      Reason: {student.remarks}
+    </div>
+  )}
     </IonCol>
 
     {/* UPDATE BUTTON */}
-    <IonCol>
+    <IonCol size="0.5">
       <IonButton
         size="small"
         color="primary"
         onClick={() => handleUpdate(student.id)}
+        style={{ fontSize: '10px', height: '25px' }}
       >
         Update
       </IonButton>

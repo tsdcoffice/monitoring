@@ -33,6 +33,7 @@ import TraineeProfile from './pages/TraineeProfile';
 import ResetPassword from './pages/ResetPassword';
 import UpdateStudent from './pages/UpdateStudent';
 import BatchList from './pages/BatchList';
+import HistoryLogs from './pages/HistoryLogs';
 
 setupIonicReact();
 
@@ -62,6 +63,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
         <Route exact path="/batch/:slug">  {session ? <BatchList /> : <Redirect to="/login" />} </Route>
         <Route exact path="/trainees/:slug"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
         <Route exact path="/trainees/:slug/:batch"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
+        <Route path="/history-logs" component={HistoryLogs} exact />
 
         {/* Profiling children */}
         <Route exact path="/profiling/scholarship">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>
