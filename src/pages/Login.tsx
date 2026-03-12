@@ -64,7 +64,7 @@ const Login: React.FC = () => {
     if (error) {
       setErrorMessage("Invalid email or password.");
     } else {
-      history.push("/Dashboard");
+      history.push("/dashboard");
     }
   };
 
@@ -79,7 +79,9 @@ const handleForgotPassword = async () => {
   setLoading(true);
 
   const redirectTo =
-    "https://tsdcoffice.github.io/monitoring/#/reset-password";
+    window.location.hostname === "localhost"
+      ? "http://localhost:8100/monitoring/reset-password"
+      : "https://tsdcoffice.github.io/monitoring/#/reset-password";
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo,
@@ -159,8 +161,7 @@ const handleForgotPassword = async () => {
                   type="email"
                   value={email}
                   placeholder="Enter your email"
-                  onIonInput={(e) =>
-                    setEmail((e.target as unknown as HTMLInputElement).value)
+                  onIonInput={(e:any)=> setEmail(e.detail.value!)
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -178,9 +179,7 @@ const handleForgotPassword = async () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   placeholder="Enter your password"
-                  onIonInput={(e) =>
-                    setPassword((e.target as unknown as HTMLInputElement).value)
-                  }
+                  onIonInput={(e:any)=> setPassword(e.detail.value!)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleLogin();

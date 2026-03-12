@@ -19,8 +19,27 @@ const HistoryLogs: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchLogs();
-  }, []);
+  fetchLogs();
+
+  const channel = supabase
+    .channel('admin_logs_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'admin_logs',
+      },
+      (payload) => {
+        setLogs((prevLogs) => [payload.new, ...prevLogs]);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   const fetchLogs = async () => {
 
@@ -59,11 +78,7 @@ const HistoryLogs: React.FC = () => {
             <IonItem key={log.id}>
               <IonLabel>
                 <h2>{log.action} - {log.table_name}</h2>
-                <p>
-                    {log.action === "INSERT" && "Added new record"}
-                    {log.action === "UPDATE" && "Updated record"}
-                    {log.action === "DELETE" && "Deleted record"}
-                </p>
+                <p>{log.description}</p>
                 <small>{new Date(log.created_at).toLocaleString()}</small>
                   <br />
                   <small>{log.admin_email}</small>

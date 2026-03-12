@@ -1,147 +1,198 @@
 import {
   IonPage,
   IonContent,
-  IonCard,
-  IonCardContent,
-  IonInput,
   IonItem,
+  IonInput,
   IonButton,
   IonText,
-  IonSpinner
+  IonCard,
+  IonCardContent,
+  IonSpinner,
+  IonIcon
 } from "@ionic/react";
-import { useEffect, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { eyeOutline, eyeOffOutline } from "ionicons/icons";
+import { useState } from "react";
 import { supabase } from "../supabaseClient";
+import { useEffect } from "react";
+
+import tesdaLogo from "../pics/tesda-logo.jfif";
+import bgImage from "../pics/tsdc.jpg";
 
 const ResetPassword: React.FC = () => {
-  const history = useHistory();
 
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+ useEffect(() => {
+  const hash = window.location.hash;
 
-const handleUpdatePassword = async () => {
-  if (!password || !confirmPassword) {
-    setError("Please fill all fields.");
-    return;
-  }
+  // Remove "#/" or "#"
+  const cleanHash = hash.replace("#/", "").replace("#", "");
 
-  if (password.length < 6) {
-    setError("Password must be at least 6 characters.");
-    return;
-  }
+  if (cleanHash.includes("access_token")) {
 
-  if (password !== confirmPassword) {
-    setError("Passwords do not match.");
-    return;
-  }
+    const params = new URLSearchParams(cleanHash);
 
-  setError("");
-  setMessage("");
-  setLoading(true);
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
 
-  const { error } = await supabase.auth.updateUser({
-    password: password,
-  });
-
-  setLoading(false);
-
-  if (error) {
-    setError(error.message);
-  } else {
-    setMessage("Password updated successfully!");
-
-    setTimeout(() => {
-      history.push("/");
-    }, 2000);
-  }
-};
-
-  useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === "PASSWORD_RECOVERY") {
-      // User clicked the link, we are now in 'recovery mode'
-      console.log("Recovery mode active");
-    } else if (event === "SIGNED_IN") {
-      // Supabase has successfully authenticated the user via the link
-      setError(""); 
+    if (access_token && refresh_token) {
+      supabase.auth.setSession({
+        access_token,
+        refresh_token
+      });
     }
-  });
-
-  return () => subscription.unsubscribe();
+  }
 }, []);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+
+    if (!password || !confirmPassword) {
+      setMessage("Please fill all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    const { error } = await supabase.auth.updateUser({
+      password: password
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setMessage(error.message);
+    } else {
+
+       // CLEAR TOKEN FROM URL
+      window.history.replaceState({}, document.title, "/monitoring/reset-password");
+      setMessage("Password updated successfully. Redirecting to login...");
+
+      //para ni sa sign out recovery session
+      await supabase.auth.signOut();
+
+      setTimeout(() => {
+        window.location.href = "/monitoring/login";
+      }, 2000);
+    }
+  };
 
   return (
     <IonPage>
-      <IonContent
-        fullscreen
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#0038A8"
-        }}
-      >
-        <IonCard
+      <IonContent fullscreen>
+
+        <div
           style={{
-            width: "100%",
-            maxWidth: "450px",
-            padding: "30px",
-            borderRadius: "20px"
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            backgroundImage: `linear-gradient(rgba(0, 20, 60, 0.89), rgba(2, 44, 129, 0.97)), url(${bgImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat"
           }}
         >
-          <IonCardContent>
 
-            <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
-              Reset Password
-            </h2>
+          <IonCard
+            style={{
+              width: "90%",
+              maxWidth: "450px",
+              padding: "30px",
+              borderRadius: "15px",
+              backgroundColor: "#ffffff",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
+            }}
+          >
+            <IonCardContent>
 
-            <IonItem style={{ marginBottom: "15px" }}>
-              <IonInput
-                type="password"
-                placeholder="New Password"
-                value={password}
-                onIonChange={(e) => setPassword(e.detail.value!)}
-              />
-            </IonItem>
+              <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                <img
+                  src={tesdaLogo}
+                  alt="TESDA Logo"
+                  style={{ width: "90px" }}
+                />
+              </div>
 
-            <IonItem style={{ marginBottom: "20px" }}>
-              <IonInput
-                type="password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onIonChange={(e) => setConfirmPassword(e.detail.value!)}
-              />
-            </IonItem>
+              <h2
+                style={{
+                  textAlign: "center",
+                  marginBottom: "25px",
+                  color: "#0038A8",
+                  fontWeight: "bold"
+                }}
+              >
+                Reset Password
+              </h2>
 
-            <IonButton
-              expand="block"
-              onClick={handleUpdatePassword}
-              disabled={loading}
-            >
-              {loading ? <IonSpinner /> : "Update Password"}
-            </IonButton>
+              {/* New Password */}
+              <IonItem style={{ marginBottom: "15px" }}>
+                <IonInput
+                  type={showPassword ? "text" : "password"}
+                  placeholder="New Password"
+                  value={password}
+                  onIonInput={(e:any)=>setPassword(e.detail.value!)}
+                />
+                <IonIcon
+                  icon={showPassword ? eyeOffOutline : eyeOutline}
+                  slot="end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setShowPassword(!showPassword)}
+                />
+              </IonItem>
 
-            {error && (
-              <IonText color="danger">
-                <p style={{ textAlign: "center", marginTop: "15px" }}>
-                  {error}
-                </p>
-              </IonText>
-            )}
+              {/* Confirm Password */}
+              <IonItem style={{ marginBottom: "20px" }}>
+                <IonInput
+                  type={showConfirm ? "text" : "password"}
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onIonInput={(e:any)=>setConfirmPassword(e.detail.value!)}
+                />
+                <IonIcon
+                  icon={showConfirm ? eyeOffOutline : eyeOutline}
+                  slot="end"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setShowConfirm(!showConfirm)}
+                />
+              </IonItem>
 
-            {message && (
-              <IonText color="success">
-                <p style={{ textAlign: "center", marginTop: "15px" }}>
-                  {message}
-                </p>
-              </IonText>
-            )}
+              <IonButton
+                expand="block"
+                onClick={handleReset}
+                disabled={loading}
+                style={{
+                  height: "50px",
+                  fontWeight: "700",
+                  "--background": "#10377a",
+                  "--border-radius": "12px"
+                }}
+              >
+                {loading ? <IonSpinner name="crescent" /> : "Reset Password"}
+              </IonButton>
 
-          </IonCardContent>
-        </IonCard>
+              {message && (
+                <IonText>
+                  <p style={{ textAlign: "center", marginTop: "15px" }}>
+                    {message}
+                  </p>
+                </IonText>
+              )}
+
+            </IonCardContent>
+          </IonCard>
+
+        </div>
+
       </IonContent>
     </IonPage>
   );

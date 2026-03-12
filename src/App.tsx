@@ -40,11 +40,13 @@ setupIonicReact();
 const AppContent: React.FC<{ session: any }> = ({ session }) => {
   const location = useLocation();
 
-  const isLoginPage = location.pathname.includes('/login');
+  const isAuthPage =
+  location.pathname.includes('/login') ||
+  location.pathname.includes('/reset-password');
 
   return (
-    <IonSplitPane contentId="main" disabled={isLoginPage}>
-      {!isLoginPage && <Menu />}
+      <IonSplitPane contentId="main" disabled={isAuthPage}>
+  {!isAuthPage && <Menu />}
 
       <IonRouterOutlet id="main">
 
@@ -69,6 +71,10 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
         <Route exact path="/profiling/scholarship">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>
         <Route exact path="/profiling/training">  {session ? <TraineeProfile /> : <Redirect to="/login" />} </Route>
 
+         <Route exact path="/reset-password">
+          <ResetPassword />
+        </Route>
+
       </IonRouterOutlet>
     </IonSplitPane>
   );
@@ -78,8 +84,17 @@ const App: React.FC = () => {
   const [session, setSession] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
-  // Restore redirect from 404
- const redirect = window.location.search.replace(/^\?\//, '');
+  // Handle Supabase password recovery
+if (window.location.hash.includes("access_token")) {
+  window.history.replaceState(
+    null,
+    "",
+    "/monitoring/reset-password" + window.location.hash
+  );
+}
+
+// GitHub Pages 404 redirect fix
+const redirect = window.location.search.replace(/^\?\//, '');
 if (redirect) {
   window.history.replaceState(null, "", "/" + redirect);
 }
