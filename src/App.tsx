@@ -102,7 +102,7 @@ if (redirect) {
   }, []);
 
   if (loading) {
-  return <IonApp><IonContent>Loading...</IonContent></IonApp>;
+  return <IonApp><IonContent></IonContent></IonApp>;
 }
 
   return (

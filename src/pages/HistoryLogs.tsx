@@ -65,6 +65,10 @@ const HistoryLogs: React.FC = () => {
                     {log.action === "DELETE" && "Deleted record"}
                 </p>
                 <small>{new Date(log.created_at).toLocaleString()}</small>
+                  <br />
+                  <small>{log.admin_email}</small>
+                    <br />
+                  <small>{log.admin_email}</small>
               </IonLabel>
             </IonItem>
           ))}
