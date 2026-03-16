@@ -89,7 +89,7 @@ const ResetPassword: React.FC = () => {
   /* ---------------- RESET PASSWORD ---------------- */
 
   const handleReset = async () => {
-
+    if (loading) return;
     if (!password || !confirmPassword) {
       setMessage("Please fill all fields.");
       return;
