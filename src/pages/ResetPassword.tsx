@@ -41,38 +41,42 @@ const ResetPassword: React.FC = () => {
   /* ---------------- SUPABASE RECOVERY SESSION ---------------- */
   useEffect(() => {
 
-    const setupSession = async () => {
+  const setupSession = async () => {
 
-      const hash = window.location.hash || window.location.href.split("#")[1] || "";
+    /* ⭐ STEP 1: Check if session already exists (refresh fix) */
 
-        /* Fix for GitHub Pages double hash */
-          const cleanHash = hash
-          .replace("#/reset-password", "")
-          .replace("#/", "")
-          .replace("#", "");
+    const { data } = await supabase.auth.getSession();
 
-      if (cleanHash.includes("access_token")) {
+    if (data.session) {
+      console.log("Session already active");
+      return;
+    }
 
-        const params = new URLSearchParams(cleanHash);
+    /* ⭐ STEP 2: Extract tokens from reset link */
 
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
+    const hash = window.location.hash || window.location.href.split("#")[1] || "";
 
-        if (access_token && refresh_token) {
+    const cleanHash = hash
+      .replace("#/reset-password", "")
+      .replace("#/", "")
+      .replace("#", "");
 
-          const { error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token
-          });
+    if (cleanHash.includes("access_token")) {
 
-          if (error) {
-            console.log("Recovery session error:", error.message);
-            setLinkExpired(true);
-          } else {
-            console.log("Recovery session set successfully");
-          }
+      const params = new URLSearchParams(cleanHash);
 
-        } else {
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+
+      if (access_token && refresh_token) {
+
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token
+        });
+
+        if (error) {
+          console.log("Recovery session error:", error.message);
           setLinkExpired(true);
         }
 
@@ -80,11 +84,15 @@ const ResetPassword: React.FC = () => {
         setLinkExpired(true);
       }
 
-    };
+    } else {
+      setLinkExpired(true);
+    }
 
-    setupSession();
+  };
 
-  }, []);
+  setupSession();
+
+}, []);
 
   /* ---------------- RESET PASSWORD ---------------- */
 
