@@ -107,6 +107,8 @@ const TraineeList: React.FC = () => {
   const [durationHours, setDurationHours] = useState<number | "">("");
   const [trainor, setTrainor] = useState("");
   const [venue, setVenue] = useState("");
+  const [selectedYear, setSelectedYear] = useState('');
+  const [yearSummary, setYearSummary] = useState<any[]>([]);
 
   const [searchText, setSearchText] = useState(urlSearch);
   useEffect(() => {
@@ -324,12 +326,66 @@ useEffect(() => {
 }, [slug, batch]);
 
   const resetFilters = () => {
-    setSelectedBarangay('');
-    setSelectedTrainingType('');
-    setSelectedBatchFilter('');
-    setSearchText('');
-    setSortOption('date_desc');
+  setSelectedBarangay('');
+  setSelectedTrainingType('');
+  setSelectedBatchFilter('');
+  setSelectedYear('');   // ⭐ ADD THIS
+  setSearchText('');
+  setSortOption('date_desc');
+};
+
+  useEffect(() => {
+
+  if (!selectedYear) {
+    setYearSummary([]);
+    return;
+  }
+
+  const fetchYearSummary = async () => {
+
+    const start = `${selectedYear}-01-01`;
+    const end = `${selectedYear}-12-31`;
+
+    const { data } = await supabase
+      .from("trainees")
+      .select("training_type_id,batch,created_at")
+      .gte("created_at", start)
+      .lte("created_at", end);
+
+    if (!data) return;
+
+    const grouped:any = {};
+
+    data.forEach(t => {
+
+      const typeName =
+        trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "Unknown";
+
+      if (!grouped[typeName]) {
+        grouped[typeName] = {
+          trainees: 0,
+          batches: new Set()
+        };
+      }
+
+      grouped[typeName].trainees += 1;
+      grouped[typeName].batches.add(t.batch);
+
+    });
+
+    const result = Object.keys(grouped).map(key => ({
+      training: key,
+      trainees: grouped[key].trainees,
+      batches: grouped[key].batches.size
+    }));
+
+    setYearSummary(result);
+
   };
+
+  fetchYearSummary();
+
+}, [selectedYear, trainingTypes]);
 
   /* PRINT */
 const handlePrint = () => {
@@ -463,7 +519,28 @@ autoTable(pdf, {
 startY = (pdf as any).lastAutoTable.finalY + 5;
 }
 
-  const tableColumn = [
+  let tableColumn;
+let tableRows;
+
+ if (selectedYear) {
+
+  tableColumn = [
+    "No.",
+    "Training Type",
+    "Total Batches",
+    "Total Trainees"
+  ];
+
+  tableRows = yearSummary.map((t, index) => [
+    index + 1,
+    t.training,
+    t.batches,
+    t.trainees
+  ]);
+
+} else {
+
+  tableColumn = [
     "No.",
     "Barangay",
     "Name",
@@ -474,22 +551,32 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
     "Training Type"
   ];
 
- const tableRows = trainees.map((t, index) => {
-  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
-  const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
-  const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+  tableRows = trainees.map((t, index) => {
 
-  return [
-    index + 1,
-    t.barangay,
-    `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
-    t.gender,
-    t.educational_attainment,
-    ipDisplay,
-    new Date(t.created_at).toLocaleDateString(),
-    trainingDisplay
-  ];
-});
+    const typeName =
+      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+
+    const trainingDisplay =
+      (!batch && !selectedBatchFilter)
+        ? `${typeName} (Batch ${t.batch})`
+        : typeName;
+
+    const ipDisplay =
+      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+
+    return [
+      index + 1,
+      t.barangay,
+      `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
+      t.gender,
+      t.educational_attainment,
+      ipDisplay,
+      new Date(t.created_at).toLocaleDateString(),
+      trainingDisplay
+    ];
+  });
+
+}
 
   autoTable(pdf, {
   head: [tableColumn],
@@ -521,6 +608,36 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
 };
 
 const generateTableRows = () => {
+
+  /* YEAR SUMMARY TABLE */
+  if (selectedYear) {
+
+    const header = `
+      <thead>
+      <tr>
+        <th>No.</th>
+        <th>Training Type</th>
+        <th>Total Batches</th>
+        <th>Total Trainees</th>
+      </tr>
+      </thead>
+      <tbody>
+    `;
+
+    const rows = yearSummary.map((t, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${t.training}</td>
+        <td>${t.batches}</td>
+        <td>${t.trainees}</td>
+      </tr>
+    `).join('');
+
+    return header + rows + "</tbody>";
+  }
+
+  /* NORMAL TRAINEE TABLE */
+
   const header = `
       <thead>
       <tr>
@@ -538,48 +655,71 @@ const generateTableRows = () => {
   `;
 
   const rows = trainees.map((t, index) => {
-    const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || '';
-    
-    // ADJUSTMENT HERE:
-    // Ipakita lang ang Batch No. kung wala ka sa sulod sa Batch Card (!batch)
-    // UG kung wala kay gi-filter nga specific batch (!selectedBatchFilter)
-    const trainingDisplay = (!batch && !selectedBatchFilter) 
-      ? `${typeName} (Batch ${t.batch})` 
-      : typeName;
 
-      const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';  
+    const typeName =
+      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+
+    const trainingDisplay =
+      (!batch && !selectedBatchFilter)
+        ? `${typeName} (Batch ${t.batch})`
+        : typeName;
+
+    const ipDisplay =
+      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
 
     return `
-    <tr>
-      <td>${index + 1}</td>
-      <td>${t.barangay}</td>
-      <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
-      <td>${t.gender}</td>
-      <td>${t.educational_attainment}</td>
-      <td>${ipDisplay}</td>
-      <td>${new Date(t.created_at).toLocaleDateString()}</td>
-      <td>${trainingDisplay}</td>
-    </tr>
-  `}).join('');
+      <tr>
+        <td>${index + 1}</td>
+        <td>${t.barangay}</td>
+        <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
+        <td>${t.gender}</td>
+        <td>${t.educational_attainment}</td>
+        <td>${ipDisplay}</td>
+        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+        <td>${trainingDisplay}</td>
+      </tr>
+    `;
+  }).join('');
 
   return header + rows + "</tbody>";
 };
 
    const downloadExcel = () => {
 
-const data = trainees.map((t, index) => {
-  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
-  return {
+let data;
+
+if (selectedYear) {
+
+  data = yearSummary.map((t, index) => ({
     "No.": index + 1,
-    Barangay: t.barangay,
-    Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
-    Gender: t.gender,
-    Education: t.educational_attainment,
-    "IP": t.is_ip ? `IP (${t.ip_group || 'N/A'})` : "Not IP",
-    Date: new Date(t.created_at).toLocaleDateString(),
-    "Training Type": (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName
-  };
-});
+    "Training Type": t.training,
+    "Total Batches": t.batches,
+    "Total Trainees": t.trainees
+  }));
+
+} else {
+
+  data = trainees.map((t, index) => {
+
+    const typeName =
+      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+
+    return {
+      "No.": index + 1,
+      Barangay: t.barangay,
+      Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
+      Gender: t.gender,
+      Education: t.educational_attainment,
+      "IP": t.is_ip ? `IP (${t.ip_group || 'N/A'})` : "Not IP",
+      Date: new Date(t.created_at).toLocaleDateString(),
+      "Training Type":
+        (!batch && !selectedBatchFilter)
+          ? `${typeName} (Batch ${t.batch})`
+          : typeName
+    };
+  });
+
+}
 
  const worksheet = XLSX.utils.json_to_sheet([]);
 
@@ -644,7 +784,9 @@ worksheet["A2"].s = {
 };
 
 // Header row
-const headerRow = ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
+const headerRow = selectedYear
+  ? ["No.", "Training Type", "Total Batches", "Total Trainees"]
+  : ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
 
 XLSX.utils.sheet_add_aoa(
   worksheet,
@@ -673,16 +815,23 @@ for (let C = 0; C < headerRow.length; C++) {
 }
 
 // Auto column width
-worksheet["!cols"] = [
-  { wch: 5 },
-  { wch: 18 },
-  { wch: 30 },
-  { wch: 10 },
-  { wch: 20 },
-  { wch: 10 },
-  { wch: 12 },
-  { wch: 30 }
-];
+worksheet["!cols"] = selectedYear
+  ? [
+      { wch: 5 },
+      { wch: 35 },
+      { wch: 20 },
+      { wch: 20 }
+    ]
+  : [
+      { wch: 5 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 30 }
+    ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
@@ -741,53 +890,35 @@ const saveBatchDetails = async () => {
 
     new TableRow({
   tableHeader: true,
-  children: [
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("No.")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Barangay")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Name")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Gender")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Education")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("IP")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Date")]
-    }),
-
-    new TableCell({
-      shading:{ fill:"10377A", type:ShadingType.CLEAR },
-      children:[new Paragraph("Training Type")]
-    })
-
-  ]
-  
+  children: selectedYear
+    ? [
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("No.")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Training Type")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Total Batches")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Total Trainees")] })
+      ]
+    : [
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("No.")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Barangay")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Name")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Gender")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Education")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("IP")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Date")] }),
+        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Training Type")] })
+      ]
 }),
 
-...trainees.map((t, index) => {
+...selectedYear
+  ? yearSummary.map((t,index)=> new TableRow({
+      children:[
+        new TableCell({children:[new Paragraph(String(index+1))]}),
+        new TableCell({children:[new Paragraph(t.training)]}),
+        new TableCell({children:[new Paragraph(String(t.batches))]}),
+        new TableCell({children:[new Paragraph(String(t.trainees))]})
+      ]
+    }))
+  : trainees.map((t,index)=> {
   const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
   // I-append ang Batch No. kung wala'y filter
   const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
@@ -1022,6 +1153,20 @@ new Paragraph(" "),
               </IonSelect>
             </IonItem>
 
+            <IonItem>
+  <IonLabel position="stacked">Year</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={selectedYear}
+    onIonChange={e => setSelectedYear(e.detail.value)}
+  >
+    <IonSelectOption value="">All Years</IonSelectOption>
+    <IonSelectOption value="2026">2026</IonSelectOption>
+    <IonSelectOption value="2025">2025</IonSelectOption>
+    <IonSelectOption value="2024">2024</IonSelectOption>
+  </IonSelect>
+</IonItem>
+
             {selectedTrainingType && availableBatches.length > 0 && (
               <IonItem>
                 <IonLabel position="stacked">Batch</IonLabel>
@@ -1053,7 +1198,12 @@ new Paragraph(" "),
         </IonPopover>
 
         <IonText>
-  <h2>Total Displayed: {trainees.length}</h2>
+  <h2>
+{selectedYear
+  ? `Overall Trainees: ${yearSummary.reduce((a,b)=>a+b.trainees,0)}`
+  : `Total Displayed: ${trainees.length}`
+}
+</h2>
 </IonText>
 
 {/* BATCH DETAILS TABLE */}
@@ -1135,49 +1285,92 @@ Save
 
 
 
-        <div ref={tableRef}>
-          <IonGrid>
-            <IonRow style={{
-              fontWeight:'bold',
-              borderBottom:'2px solid #333',
-              background:'#10377a',
-              color:'white',
-              textAlign:'center'
-            }}>
-              <IonCol size="1">No.</IonCol>
-              <IonCol>Barangay</IonCol>
-              <IonCol>Name</IonCol>
-              <IonCol>Gender</IonCol>
-              <IonCol>Education</IonCol>
-              <IonCol>IP</IonCol>
-              <IonCol>Date</IonCol>
-              <IonCol>Training Type</IonCol>
-            </IonRow>
+      {selectedYear ? (
 
-            {trainees.map((t, index) => (
-              <IonRow key={t.id}>
-                <IonCol size="1">{index + 1}</IonCol>
-                <IonCol>{t.barangay}</IonCol>
-                <IonCol>
-                  {t.lastname}, {t.firstname} {t.middlename || ''}
-                </IonCol>
-                <IonCol>{t.gender}</IonCol>
-                <IonCol>{t.educational_attainment}</IonCol>
-                <IonCol>
-                  {t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP'}
-                </IonCol>
-                <IonCol>
-                  {new Date(t.created_at).toLocaleDateString()}
-                </IonCol>
-                <IonCol>
-                  {trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
-                  {/* Ipakita lang ang batch number kung "All Trainees" ug walay filter */}
-                  {!batch && !selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
-                </IonCol>
-              </IonRow>
-            ))}
-          </IonGrid>
-        </div>
+<div ref={tableRef}>
+
+<h2>Year {selectedYear}</h2>
+
+<IonGrid>
+
+<IonRow style={{
+fontWeight:'bold',
+background:'#10377a',
+color:'white'
+}}>
+<IonCol size="1">No.</IonCol>
+<IonCol>Training Type</IonCol>
+<IonCol>Total Batches</IonCol>
+<IonCol>Total Trainees</IonCol>
+</IonRow>
+
+{yearSummary.map((t,index)=>(
+<IonRow key={index}>
+<IonCol size="1">{index+1}</IonCol>
+<IonCol>{t.training}</IonCol>
+<IonCol>{t.batches}</IonCol>
+<IonCol>{t.trainees}</IonCol>
+</IonRow>
+))}
+
+</IonGrid>
+
+<IonText>
+<b>Overall Trainees: {yearSummary.reduce((a,b)=>a+b.trainees,0)}</b>
+</IonText>
+
+</div>
+
+) : (
+
+<div ref={tableRef}>
+
+<IonGrid>
+
+<IonRow style={{
+fontWeight:'bold',
+borderBottom:'2px solid #333',
+background:'#10377a',
+color:'white',
+textAlign:'center'
+}}>
+<IonCol size="1">No.</IonCol>
+<IonCol>Barangay</IonCol>
+<IonCol>Name</IonCol>
+<IonCol>Gender</IonCol>
+<IonCol>Education</IonCol>
+<IonCol>IP</IonCol>
+<IonCol>Date</IonCol>
+<IonCol>Training Type</IonCol>
+</IonRow>
+
+{trainees.map((t, index) => (
+<IonRow key={t.id}>
+<IonCol size="1">{index + 1}</IonCol>
+<IonCol>{t.barangay}</IonCol>
+<IonCol>
+{t.lastname}, {t.firstname} {t.middlename || ''}
+</IonCol>
+<IonCol>{t.gender}</IonCol>
+<IonCol>{t.educational_attainment}</IonCol>
+<IonCol>
+{t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP'}
+</IonCol>
+<IonCol>
+{new Date(t.created_at).toLocaleDateString()}
+</IonCol>
+<IonCol>
+{trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
+{!batch && !selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
+</IonCol>
+</IonRow>
+))}
+
+</IonGrid>
+
+</div>
+
+)}
 
       </IonContent>
       <IonPopover
