@@ -22,26 +22,30 @@ const ResetPassword: React.FC = () => {
 
   const [password, setPassword] = useState("");
  useEffect(() => {
-  const hash = window.location.hash;
+  const setupSession = async () => {
+    const hash = window.location.hash;
 
-  // Remove "#/" or "#"
-  const cleanHash = hash.replace("#/", "").replace("#", "");
+    const cleanHash = hash.replace("#/", "").replace("#", "");
 
-  if (cleanHash.includes("access_token")) {
+    if (cleanHash.includes("access_token")) {
+      const params = new URLSearchParams(cleanHash);
 
-    const params = new URLSearchParams(cleanHash);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
 
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
-
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({
-        access_token,
-        refresh_token
-      });
+      if (access_token && refresh_token) {
+        await supabase.auth.setSession({
+          access_token,
+          refresh_token
+        });
+      }
     }
-  }
+  };
+
+  setupSession();
 }, []);
+
+    
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

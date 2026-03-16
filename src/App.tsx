@@ -51,7 +51,6 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
       <IonRouterOutlet id="main">
 
         {/* Default redirect */}
-        <Route exact path="/reset-password" component={ResetPassword} />
         <Route exact path="/">  {session ? <Redirect to="/dashboard" /> : <Redirect to="/login" />} </Route>
         <Route exact path="/login"> {session ? <Redirect to="/dashboard" /> : <Login />} </Route>
         <Route exact path="/dashboard"> {session ? <Dashboard /> : <Redirect to="/login" />} </Route>
@@ -84,22 +83,23 @@ const App: React.FC = () => {
   const [session, setSession] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
-  // Handle Supabase password recovery
-if (window.location.hash.includes("access_token")) {
-  window.history.replaceState(
-    null,
-    "",
-    "/monitoring/reset-password" + window.location.hash
-  );
-}
-
-// GitHub Pages 404 redirect fix
-const redirect = window.location.search.replace(/^\?\//, '');
-if (redirect) {
-  window.history.replaceState(null, "", "/" + redirect);
-}
 
   React.useEffect(() => {
+    // ✅ Fix Supabase reset password redirect
+  if (window.location.hash.includes("access_token")) {
+    window.history.replaceState(
+      null,
+      "",
+      "/reset-password" + window.location.hash
+    );
+  }
+
+  // ✅ Fix GitHub Pages 404 redirect
+  const redirect = window.location.search.replace(/^\?\//, '');
+  if (redirect) {
+    window.history.replaceState(null, "", "/" + redirect);
+  }
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
