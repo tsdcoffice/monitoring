@@ -1,4 +1,3 @@
-declare module 'xlsx-js-style';
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
   IonGrid, IonRow, IonCol, IonText, IonButton, IonIcon,
@@ -16,6 +15,7 @@ import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, Ali
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { TextRun } from "docx";
+import { statsChartOutline, closeOutline } from 'ionicons/icons';
 
 import {
   printOutline,
@@ -108,7 +108,26 @@ const TraineeList: React.FC = () => {
   const [trainor, setTrainor] = useState("");
   const [venue, setVenue] = useState("");
   const [selectedYear, setSelectedYear] = useState('');
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [yearSummary, setYearSummary] = useState<any[]>([]);
+  const [availableTrainingTypes, setAvailableTrainingTypes] = useState<TrainingType[]>([]);
+  const [isReportMode, setIsReportMode] = useState(false);
+
+      const overallTrainings = yearSummary.length;
+
+const overallBatches = yearSummary.reduce(
+  (sum, item) => sum + item.batches,
+  0
+);
+
+const overallTrainees = yearSummary.reduce(
+  (sum, item) => sum + item.trainees,
+  0
+);
+
+      const reportTitle = selectedYear
+  ? `TSDC Year ${selectedYear} Training Summary`
+  : "TSDC Trainee List";
 
   const [searchText, setSearchText] = useState(urlSearch);
   useEffect(() => {
@@ -257,6 +276,17 @@ useEffect(() => {
         query = query.eq('batch', selectedBatchFilter);
       }
 
+      // ✅ YEAR FILTER (FIX)
+if (selectedYear) {
+  const start = `${selectedYear}-01-01`;
+  const end = `${selectedYear}-12-31`;
+
+  query = query
+    .gte('created_at', start)
+    .lte('created_at', end);
+}
+
+
       switch (sortOption) {
         case 'az':
           query = query.order('lastname', { ascending: true });
@@ -284,6 +314,7 @@ useEffect(() => {
     selectedBarangay,
     selectedTrainingType,
     selectedBatchFilter,
+     selectedYear, // ✅ ADD THIS
     sortOption
   ]);
 
@@ -334,6 +365,30 @@ useEffect(() => {
   setSortOption('date_desc');
 };
 
+    useEffect(() => {
+
+  const fetchYears = async () => {
+
+    const { data } = await supabase
+      .from("trainees")
+      .select("created_at");
+
+    if (!data) return;
+
+    const years = Array.from(
+      new Set(
+        data.map(t => new Date(t.created_at).getFullYear())
+      )
+    ).sort((a,b)=>b-a);
+
+    setAvailableYears(years.map(String));
+
+  };
+
+  fetchYears();
+
+}, []);
+
   useEffect(() => {
 
   if (!selectedYear) {
@@ -358,8 +413,11 @@ useEffect(() => {
 
     data.forEach(t => {
 
-      const typeName =
-        trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "Unknown";
+      const type = trainingTypes.find(tt => tt.id === t.training_type_id);
+
+if (!type) return; // 🚫 skip unknown
+
+const typeName = type.name;
 
       if (!grouped[typeName]) {
         grouped[typeName] = {
@@ -387,6 +445,83 @@ useEffect(() => {
 
 }, [selectedYear, trainingTypes]);
 
+    const generateTableRows = () => {
+
+  /* YEAR SUMMARY TABLE */
+  if (selectedYear) {
+
+    const header = `
+      <thead>
+      <tr>
+        <th>No.</th>
+        <th>Training Type</th>
+        <th>Total Batches</th>
+        <th>Total Trainees</th>
+      </tr>
+      </thead>
+      <tbody>
+    `;
+
+    const rows = yearSummary.map((t, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${t.training}</td>
+        <td>${t.batches}</td>
+        <td>${t.trainees}</td>
+      </tr>
+    `).join('');
+
+    return header + rows + "</tbody>";
+  }
+
+  /* NORMAL TRAINEE TABLE */
+
+  const header = `
+      <thead>
+      <tr>
+        <th>No.</th>
+        <th>Barangay</th>
+        <th>Name</th>
+        <th>Gender</th>
+        <th>Education</th>
+        <th>IP</th>
+        <th>Date</th>
+        <th>Training Type</th>
+      </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const rows = trainees.map((t, index) => {
+
+    const typeName =
+      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+
+    const trainingDisplay =
+      (!batch && !selectedBatchFilter)
+        ? `${typeName} (Batch ${t.batch})`
+        : typeName;
+
+    const ipDisplay =
+      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${t.barangay}</td>
+        <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
+        <td>${t.gender}</td>
+        <td>${t.educational_attainment}</td>
+        <td>${ipDisplay}</td>
+        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+        <td>${trainingDisplay}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return header + rows + "</tbody>";
+};
+
   /* PRINT */
 const handlePrint = () => {
   if (!tableRef.current) return;
@@ -410,15 +545,13 @@ const handlePrint = () => {
       </head>
       <body>
         <img id="print-header" src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
-        <h2>TSDC Trainee List</h2>
+        <h2>${reportTitle}</h2>
 
 <div class="generated" style="margin-bottom:15px;">
 Generated: ${new Date().toLocaleDateString()}
 </div>
 
 ${batchDetails ? `
-<div style="margin-bottom:15px;font-size:12px">
-
 <div style="margin-bottom:15px;font-size:12px">
 
 <div style="display:flex;">
@@ -434,12 +567,28 @@ ${batchDetails ? `
 </div>
 
 </div>
+` : ""}
 
+<table>
+  ${generateTableRows()}
+</table>
+
+    <div style="
+  margin-top:20px;
+  padding-top:10px;
+  border-top:2px solid #000;
+  font-weight:bold;
+">
+
+<!-- ✅ MOVE TOTALS HERE -->
+${selectedYear ? `
+<div style="margin-top:20px;font-weight:bold">
+Overall Trainings: ${overallTrainings}<br>
+Overall Batches: ${overallBatches}<br>
+Overall Trainees: ${overallTrainees.toLocaleString()}
 </div>
 ` : ""}
-        <table>
-          ${generateTableRows()}
-        </table>
+
       </body>
     </html>
   `);
@@ -477,7 +626,7 @@ const handleDownloadPDF = () => {
 pdf.addImage(img, "PNG", 10, 5, 190, 30);
 
   pdf.setFontSize(16);
-pdf.text('TSDC Trainee List', 105, 40, { align: 'center' });
+pdf.text(reportTitle, 105, 40, { align: 'center' });
 
 pdf.setFontSize(10);
 pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
@@ -604,85 +753,21 @@ let tableRows;
   }
 });
 
-  pdf.save('tsdc_trainee_list.pdf');
-};
+    const finalY = (pdf as any).lastAutoTable.finalY;
 
-const generateTableRows = () => {
+if (selectedYear) {
+  pdf.text(`Overall Trainings: ${overallTrainings}`, 20, finalY + 10);
+  pdf.text(`Overall Batches: ${overallBatches}`, 20, finalY + 18);
+  pdf.text(`Overall Trainees: ${overallTrainees.toLocaleString()}`, 20, finalY + 26);
+}
 
-  /* YEAR SUMMARY TABLE */
-  if (selectedYear) {
+  pdf.save(
+  selectedYear
+    ? `tsdc_${selectedYear}_summary.pdf`
+    : "tsdc_trainee_list.pdf"
+); };
 
-    const header = `
-      <thead>
-      <tr>
-        <th>No.</th>
-        <th>Training Type</th>
-        <th>Total Batches</th>
-        <th>Total Trainees</th>
-      </tr>
-      </thead>
-      <tbody>
-    `;
 
-    const rows = yearSummary.map((t, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${t.training}</td>
-        <td>${t.batches}</td>
-        <td>${t.trainees}</td>
-      </tr>
-    `).join('');
-
-    return header + rows + "</tbody>";
-  }
-
-  /* NORMAL TRAINEE TABLE */
-
-  const header = `
-      <thead>
-      <tr>
-        <th>No.</th>
-        <th>Barangay</th>
-        <th>Name</th>
-        <th>Gender</th>
-        <th>Education</th>
-        <th>IP</th>
-        <th>Date</th>
-        <th>Training Type</th>
-      </tr>
-      </thead>
-      <tbody>
-  `;
-
-  const rows = trainees.map((t, index) => {
-
-    const typeName =
-      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
-
-    const trainingDisplay =
-      (!batch && !selectedBatchFilter)
-        ? `${typeName} (Batch ${t.batch})`
-        : typeName;
-
-    const ipDisplay =
-      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
-
-    return `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${t.barangay}</td>
-        <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
-        <td>${t.gender}</td>
-        <td>${t.educational_attainment}</td>
-        <td>${ipDisplay}</td>
-        <td>${new Date(t.created_at).toLocaleDateString()}</td>
-        <td>${trainingDisplay}</td>
-      </tr>
-    `;
-  }).join('');
-
-  return header + rows + "</tbody>";
-};
 
    const downloadExcel = () => {
 
@@ -727,7 +812,7 @@ if (selectedYear) {
 XLSX.utils.sheet_add_aoa(
   worksheet,
   [
-    ["TSDC Trainee List"],
+    [reportTitle],
     [`Generated: ${new Date().toLocaleDateString()}`],
     [],
     
@@ -801,6 +886,20 @@ XLSX.utils.sheet_add_json(
   { origin: "A7", skipHeader: true }
 );
 
+// 2 add totals AFTER
+if (selectedYear) {
+  XLSX.utils.sheet_add_aoa(
+    worksheet,
+    [
+      [],
+      [`Overall Trainings: ${overallTrainings}`],
+      [`Overall Batches: ${overallBatches}`],
+      [`Overall Trainees: ${overallTrainees}`]
+    ],
+    { origin: -1 }
+  );
+}
+
 // Style header cells
 const headerStyle = {
   fill: { fgColor: { rgb: "10377A" } },
@@ -843,7 +942,12 @@ worksheet["!cols"] = selectedYear
 
   const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
 
-  saveAs(blob, "tsdc_trainee_list.xlsx");
+  saveAs(
+  blob,
+  selectedYear
+    ? `tsdc_${selectedYear}_summary.xlsx`
+    : "tsdc_trainee_list.xlsx"
+);
 
   setShowDownload(false);
 };
@@ -939,6 +1043,19 @@ const saveBatchDetails = async () => {
 })
   ];
 
+const paragraphs = [
+  new Paragraph({ text: "Some header or title..." }),
+  // only add totals if YEAR is selected
+];
+
+if (selectedYear) {
+  paragraphs.push(
+    new Paragraph({ text: `Overall Trainings: ${overallTrainings}` }),
+    new Paragraph({ text: `Overall Batches: ${overallBatches}` }),
+    new Paragraph({ text: `Overall Trainees: ${overallTrainees.toLocaleString()}` })
+  );
+}
+
   
 
   const doc = new Document({
@@ -958,8 +1075,8 @@ const saveBatchDetails = async () => {
     ]
   }),
 
-  new Paragraph({
-  text: "TSDC Trainee List",
+new Paragraph({
+  text: reportTitle,
   heading: HeadingLevel.HEADING_1,
   alignment: AlignmentType.CENTER
 }),
@@ -1025,12 +1142,9 @@ new Paragraph(" "),
 new Paragraph(" "),
 
   new Table({
-  rows,
-  width: {
-    size: 100,
-    type: "pct"
-  }
-})
+    rows,
+    width:{ size:100, type:"pct" }
+  }),
 
 ]
     }]
@@ -1038,7 +1152,12 @@ new Paragraph(" "),
 
   const blob = await Packer.toBlob(doc);
 
-  saveAs(blob, "tsdc_trainee_list.docx");
+  saveAs(
+  blob,
+  selectedYear
+    ? `tsdc_${selectedYear}_summary.docx`
+    : "tsdc_trainee_list.docx"
+);
 
   setShowDownload(false);
 };
@@ -1118,84 +1237,113 @@ new Paragraph(" "),
           </div>
         </div>
 
+        {isReportMode && (
+  <IonText color="primary">
+    <p><b>Report Mode:</b> Year Summary Active</p>
+  </IonText>
+)}
+
         {/* FILTER POPOVER */}
-        <IonPopover
-          isOpen={showFilter}
-          onDidDismiss={() => setShowFilter(false)}
+        {/* FILTER POPOVER */}
+<IonPopover
+  isOpen={showFilter}
+  onDidDismiss={() => setShowFilter(false)}
+>
+  <IonList style={{ padding: 15, minWidth: 250 }}>
+
+    {/* MODE TOGGLE BUTTON */}
+    <IonItem lines="none">
+      <IonButton
+        expand="block"
+        fill="outline"
+        onClick={() => setIsReportMode(prev => !prev)}
+      >
+        <IonIcon
+          slot="start"
+          icon={isReportMode ? closeOutline : statsChartOutline}
+        />
+        {isReportMode ? "Exit Report Mode" : "Year Summary Mode"}
+      </IonButton>
+    </IonItem>
+
+    {/* REPORT MODE */}
+    {isReportMode ? (
+      <IonItem>
+        <IonLabel position="stacked">Year (Summary Report)</IonLabel>
+        <IonSelect
+          interface="alert"  // automatic filter
+          value={selectedYear}
+          onIonChange={e => setSelectedYear(e.detail.value)}
         >
-          <IonList style={{ padding: 15, minWidth: 250 }}>
+          <IonSelectOption value="">Select Year</IonSelectOption>
+          {availableYears.map(year => (
+            <IonSelectOption key={year} value={year}>
+              {year}
+            </IonSelectOption>
+          ))}
+        </IonSelect>
+      </IonItem>
+    ) : (
+      <>
+        {/* NORMAL MODE */}
+        <IonItem>
+          <IonLabel>Barangay</IonLabel>
+          <IonSelect
+            interface="alert" // automatic filter
+            value={selectedBarangay}
+            onIonChange={(e) => setSelectedBarangay(e.detail.value)}
+          >
+            <IonSelectOption value="">All</IonSelectOption>
+            {barangays.map(b => (
+              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
 
-            <IonItem>
-              <IonLabel position="stacked">Barangay</IonLabel>
-              <IonSelect
-                interface="popover"
-                value={selectedBarangay}
-                onIonChange={e => setSelectedBarangay(e.detail.value)}
-              >
-                {barangays.map(b => (
-                  <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-                ))}
-              </IonSelect>
-            </IonItem>
+        <IonItem>
+          <IonLabel>Training Type</IonLabel>
+          <IonSelect
+            interface="alert" // automatic filter
+            value={selectedTrainingType}
+            onIonChange={(e) => setSelectedTrainingType(e.detail.value)}
+          >
+            <IonSelectOption value="">All</IonSelectOption>
+            {trainingTypes.map(t => (
+              <IonSelectOption key={t.id} value={t.id}>
+                {t.name}
+              </IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
 
-            <IonItem>
-              <IonLabel position="stacked">Training Type</IonLabel>
-              <IonSelect
-                interface="popover"
-                value={selectedTrainingType}
-                onIonChange={e => setSelectedTrainingType(e.detail.value)}
-              >
-                {trainingTypes.map(t => (
-                  <IonSelectOption key={t.id} value={t.id}>
-                    {t.name}
-                  </IonSelectOption>
-                ))}
-              </IonSelect>
-            </IonItem>
+        <IonItem>
+          <IonLabel>Batch</IonLabel>
+          <IonSelect
+            interface="alert" // automatic filter
+            value={selectedBatchFilter}
+            onIonChange={(e) => setSelectedBatchFilter(e.detail.value)}
+          >
+            <IonSelectOption value="">All</IonSelectOption>
+            {availableBatches.map(b => (
+              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
+      </>
+    )}
 
-            <IonItem>
-  <IonLabel position="stacked">Year</IonLabel>
-  <IonSelect
-    interface="popover"
-    value={selectedYear}
-    onIonChange={e => setSelectedYear(e.detail.value)}
-  >
-    <IonSelectOption value="">All Years</IonSelectOption>
-    <IonSelectOption value="2026">2026</IonSelectOption>
-    <IonSelectOption value="2025">2025</IonSelectOption>
-    <IonSelectOption value="2024">2024</IonSelectOption>
-  </IonSelect>
-</IonItem>
+    {/* BUTTONS */}
+    <div style={{display:'flex',gap:'8px',marginTop:'10px'}}>
+      <IonButton expand="block" color="medium" onClick={resetFilters}>
+        Reset
+      </IonButton>
+      <IonButton expand="block" onClick={() => setShowFilter(false)}>
+        OK
+      </IonButton>
+    </div>
 
-            {selectedTrainingType && availableBatches.length > 0 && (
-              <IonItem>
-                <IonLabel position="stacked">Batch</IonLabel>
-                <IonSelect
-                  interface="popover"
-                  value={selectedBatchFilter}
-                  onIonChange={e => setSelectedBatchFilter(e.detail.value)}
-                  placeholder="All Batches"
-                >
-                  <IonSelectOption value="">All Batches</IonSelectOption>
-                  {availableBatches.map(b => (
-                    <IonSelectOption key={b} value={b}>Batch {b}</IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
-            )}
-
-            {/* RESET + OK BUTTON */}
-            <div style={{display:'flex',gap:'8px',marginTop:'10px'}}>
-              <IonButton expand="block" color="medium" onClick={resetFilters}>
-                Reset
-              </IonButton>
-              <IonButton expand="block" onClick={() => setShowFilter(false)}>
-                OK
-              </IonButton>
-            </div>
-
-          </IonList>
-        </IonPopover>
+  </IonList>
+</IonPopover>
 
         <IonText>
   <h2>
@@ -1251,7 +1399,7 @@ onIonChange={e => setEndDate(e.detail.value!)}
 <IonInput
 type="number"
 value={durationHours}
-onIonChange={e => setDurationHours(Number(e.detail.value))}
+onIonChange={e => setDurationHours(Number(e.detail.value) || 0)}
 placeholder="Hours"
 />
 </IonCol>
@@ -1398,4 +1546,3 @@ textAlign:'center'
 };
 
 export default TraineeList;
-
