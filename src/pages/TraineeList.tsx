@@ -111,6 +111,7 @@ const TraineeList: React.FC = () => {
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [yearSummary, setYearSummary] = useState<any[]>([]);
   const [availableTrainingTypes, setAvailableTrainingTypes] = useState<TrainingType[]>([]);
+  const [filteredTrainingTypes, setFilteredTrainingTypes] = useState<TrainingType[]>([]);
   const [isReportMode, setIsReportMode] = useState(false);
 
       const overallTrainings = yearSummary.length;
@@ -170,33 +171,81 @@ const overallTrainees = yearSummary.reduce(
     };
     fetchTypes();
   }, []);
+  useEffect(() => {
+  const fetchFilteredTrainingTypes = async () => {
+
+    let query = supabase
+      .from('trainees')
+      .select('training_type_id');
+
+    if (selectedBarangay) {
+      query = query.eq('barangay', selectedBarangay);
+    }
+
+    const { data } = await query;
+
+    if (!data) return;
+
+    const uniqueTypeIds = Array.from(
+      new Set(data.map(d => d.training_type_id))
+    );
+
+    const filtered = trainingTypes.filter(t =>
+      uniqueTypeIds.includes(t.id)
+    );
+
+    setFilteredTrainingTypes(filtered);
+
+  };
+
+  fetchFilteredTrainingTypes();
+}, [selectedBarangay, trainingTypes]);
 
   /* =========================
    FETCH UNIQUE BATCHES FROM TRAINEES
 ========================== */
 useEffect(() => {
   const fetchAvailableBatches = async () => {
-    // If no training type is selected, hide batches and reset filter
-    if (!selectedTrainingType) {
+
+    if (!selectedTrainingType && !selectedBarangay) {
       setAvailableBatches([]);
       setSelectedBatchFilter('');
       return;
     }
 
-    // Fetch unique batches that are actually registered in profiling
-    const { data } = await supabase
+    let query = supabase
       .from('trainees')
-      .select('batch')
-      .eq('training_type_id', selectedTrainingType)
-      .not('batch', 'is', null);
+      .select('batch');
+
+    if (selectedTrainingType) {
+      query = query.eq('training_type_id', selectedTrainingType);
+    }
+
+    if (selectedBarangay) {
+      query = query.eq('barangay', selectedBarangay);
+    }
+
+    const { data } = await query.not('batch', 'is', null);
 
     if (data) {
-      const uniqueBatches = Array.from(new Set(data.map(item => item.batch))).sort();
+      const uniqueBatches = Array.from(
+        new Set(data.map(item => item.batch))
+      ).sort();
+
       setAvailableBatches(uniqueBatches);
     }
   };
 
   fetchAvailableBatches();
+}, [selectedTrainingType, selectedBarangay]);
+
+useEffect(() => {
+  setSelectedTrainingType('');
+  setSelectedBatchFilter('');
+}, [selectedBarangay]);
+
+useEffect(() => {
+  setSelectedBatchFilter('');
 }, [selectedTrainingType]);
 
 // I-paste kini pagkahuman sa availableBatches useEffect
@@ -431,7 +480,9 @@ const typeName = type.name;
 
     });
 
-    const result = Object.keys(grouped).map(key => ({
+    const result = Object.keys(grouped)
+  .sort((a, b) => a.localeCompare(b))
+  .map(key => ({
       training: key,
       trainees: grouped[key].trainees,
       batches: grouped[key].batches.size
@@ -1308,7 +1359,7 @@ new Paragraph(" "),
             onIonChange={(e) => setSelectedTrainingType(e.detail.value)}
           >
             <IonSelectOption value="">All</IonSelectOption>
-            {trainingTypes.map(t => (
+            {(selectedBarangay ? filteredTrainingTypes : trainingTypes).map(t => (
               <IonSelectOption key={t.id} value={t.id}>
                 {t.name}
               </IonSelectOption>
