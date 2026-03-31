@@ -27,17 +27,47 @@ import autoTable from 'jspdf-autotable';
 
 interface Trainee {
   id: string;
-  firstname: string;
+
   lastname: string;
+  firstname: string;
   middlename: string | null;
+  extension: string | null;
+
   barangay: string;
+  city: string;
+  province: string;
+
+  email: string;
+  contact: string;
+  nationality: string;
+
   gender: string;
+  civil_status: string;
+  employment: string;
+
+  birth_month: string;
+  birth_day: number;
+  birth_year: number;
+  age: number;
+
+  birthplace_city: string;
+  birthplace_province: string;
+
   educational_attainment: string;
-  is_ip: boolean;
-  ip_group: string | null;
-  created_at: string;
-  training_type_id: string;
+
+  classification: string[];
+  disability: string;
+  disability_other: string;
+
+  course: string;
   batch: string;
+
+  scholarship: string;
+  scholarship_other: string;
+
+  year_enrolled: number;
+
+  created_at: string;
 }
 
 interface TrainingType {
@@ -47,7 +77,7 @@ interface TrainingType {
 
 interface BatchDetails {
   id: string;
-  training_type_id: string;
+  course: string;
   batch: string;
   start_date: string;
   end_date: string;
@@ -91,6 +121,21 @@ const barangays = [
 ];
 
 const TraineeList: React.FC = () => {
+
+  const tableHeaderStyle = {
+    fontWeight: 'bold',
+    background: '#10377a',
+    color: 'white',
+    textAlign: 'center' as const,
+    padding: '10px 6px'
+  };
+
+  const tableCellStyle = {
+  padding: '8px 6px',
+  textAlign: 'center' as const,
+  borderBottom: '1px solid #eee',
+  whiteSpace: 'nowrap'   // ✅ ADD THIS
+};
 
   const { slug, batch } = useParams<{ slug: string, batch?: string }>();
   const history = useHistory();
@@ -155,28 +200,19 @@ const overallTrainees = yearSummary.reduce(
       setDebouncedSearch(searchText);
     }, 400);
 
+   
+
     return () => clearTimeout(handler);
   }, [searchText]);
 
-  /* =========================
-     FETCH TRAINING TYPES
-  ========================== */
-  useEffect(() => {
-    const fetchTypes = async () => {
-      const { data } = await supabase
-        .from('training_types')
-        .select('*')
-        .order('name');
-      setTrainingTypes(data || []);
-    };
-    fetchTypes();
-  }, []);
+
+  
   useEffect(() => {
   const fetchFilteredTrainingTypes = async () => {
 
     let query = supabase
       .from('trainees')
-      .select('training_type_id');
+      .select('course');
 
     if (selectedBarangay) {
       query = query.eq('barangay', selectedBarangay);
@@ -187,11 +223,11 @@ const overallTrainees = yearSummary.reduce(
     if (!data) return;
 
     const uniqueTypeIds = Array.from(
-      new Set(data.map(d => d.training_type_id))
+      new Set(data.map(d => d.course))
     );
 
     const filtered = trainingTypes.filter(t =>
-      uniqueTypeIds.includes(t.id)
+      uniqueTypeIds.includes(t.name)
     );
 
     setFilteredTrainingTypes(filtered);
@@ -218,8 +254,8 @@ useEffect(() => {
       .select('batch');
 
     if (selectedTrainingType) {
-      query = query.eq('training_type_id', selectedTrainingType);
-    }
+  query = query.eq('course', selectedTrainingType);
+}
 
     if (selectedBarangay) {
       query = query.eq('barangay', selectedBarangay);
@@ -284,26 +320,14 @@ useEffect(() => {
 
       if (slug && slug !== 'all') {
 
-        const trainingName = courseSlugMap[slug];
+  const trainingName = courseSlugMap[slug];
 
-        const { data: typeData } = await supabase
-          .from('training_types')
-          .select('id')
-          .eq('name', trainingName)
-          .single();
+  query = query.eq('course', trainingName);
 
-        if (!typeData) {
-          setTrainees([]);
-          return;
-        }
-          query = query.eq('training_type_id', typeData.id);
-
-            if(batch){
-              query = query.eq("batch", batch)
-            }
-        
-
-      }
+  if (batch) {
+    query = query.eq('batch', batch);
+  }
+}
 
         if (debouncedSearch || urlSearch) {
           const searchValue = debouncedSearch || urlSearch;
@@ -318,8 +342,8 @@ useEffect(() => {
       }
 
       if (selectedTrainingType) {
-        query = query.eq('training_type_id', selectedTrainingType);
-      }
+  query = query.eq('course', selectedTrainingType);
+}
 
       if (selectedBatchFilter) {
         query = query.eq('batch', selectedBatchFilter);
@@ -452,7 +476,7 @@ if (selectedYear) {
 
     const { data } = await supabase
       .from("trainees")
-      .select("training_type_id,batch,created_at")
+      .select("course,batch,created_at")
       .gte("created_at", start)
       .lte("created_at", end);
 
@@ -462,11 +486,7 @@ if (selectedYear) {
 
     data.forEach(t => {
 
-      const type = trainingTypes.find(tt => tt.id === t.training_type_id);
-
-if (!type) return; // 🚫 skip unknown
-
-const typeName = type.name;
+      const typeName = t.course;
 
       if (!grouped[typeName]) {
         grouped[typeName] = {
@@ -546,15 +566,14 @@ const typeName = type.name;
   const rows = trainees.map((t, index) => {
 
     const typeName =
-      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+      trainingTypes.find(tt => tt.id === t.course)?.name || "";
 
     const trainingDisplay =
       (!batch && !selectedBatchFilter)
         ? `${typeName} (Batch ${t.batch})`
         : typeName;
 
-    const ipDisplay =
-      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+ 
 
     return `
       <tr>
@@ -563,7 +582,6 @@ const typeName = type.name;
         <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
         <td>${t.gender}</td>
         <td>${t.educational_attainment}</td>
-        <td>${ipDisplay}</td>
         <td>${new Date(t.created_at).toLocaleDateString()}</td>
         <td>${trainingDisplay}</td>
       </tr>
@@ -754,15 +772,14 @@ let tableRows;
   tableRows = trainees.map((t, index) => {
 
     const typeName =
-      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+      trainingTypes.find(tt => tt.id === t.course)?.name || "";
 
     const trainingDisplay =
       (!batch && !selectedBatchFilter)
         ? `${typeName} (Batch ${t.batch})`
         : typeName;
 
-    const ipDisplay =
-      t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+  
 
     return [
       index + 1,
@@ -770,7 +787,6 @@ let tableRows;
       `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
       t.gender,
       t.educational_attainment,
-      ipDisplay,
       new Date(t.created_at).toLocaleDateString(),
       trainingDisplay
     ];
@@ -838,7 +854,7 @@ if (selectedYear) {
   data = trainees.map((t, index) => {
 
     const typeName =
-      trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+      trainingTypes.find(tt => tt.id === t.course)?.name || "";
 
     return {
       "No.": index + 1,
@@ -846,7 +862,6 @@ if (selectedYear) {
       Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
       Gender: t.gender,
       Education: t.educational_attainment,
-      "IP": t.is_ip ? `IP (${t.ip_group || 'N/A'})` : "Not IP",
       Date: new Date(t.created_at).toLocaleDateString(),
       "Training Type":
         (!batch && !selectedBatchFilter)
@@ -1074,10 +1089,10 @@ const saveBatchDetails = async () => {
       ]
     }))
   : trainees.map((t,index)=> {
-  const typeName = trainingTypes.find(tt => tt.id === t.training_type_id)?.name || "";
+  const typeName = trainingTypes.find(tt => tt.id === t.course)?.name || "";
   // I-append ang Batch No. kung wala'y filter
   const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
-  const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
+
 
   return new TableRow({
     children: [
@@ -1086,7 +1101,6 @@ const saveBatchDetails = async () => {
       new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
       new TableCell({children:[new Paragraph(t.gender)]}),
       new TableCell({children:[new Paragraph(t.educational_attainment)]}),
-      new TableCell({children:[new Paragraph(ipDisplay)]}),
       new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
       new TableCell({children:[new Paragraph(trainingDisplay)]}) 
     ]
@@ -1360,9 +1374,9 @@ new Paragraph(" "),
           >
             <IonSelectOption value="">All</IonSelectOption>
             {(selectedBarangay ? filteredTrainingTypes : trainingTypes).map(t => (
-              <IonSelectOption key={t.id} value={t.id}>
-                {t.name}
-              </IonSelectOption>
+              <IonSelectOption key={t.name} value={t.name}>
+  {t.name}
+</IonSelectOption>
             ))}
           </IonSelect>
         </IonItem>
@@ -1484,116 +1498,136 @@ Save
 
 
 
-      {selectedYear ? (
+     {selectedYear ? (
+        <div
+          ref={tableRef}
+          style={{
+            overflowX: "auto",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "10px"
+          }}
+        >
+          <h2>Year {selectedYear}</h2>
+          <IonGrid>
+            <IonRow style={{ fontWeight: 'bold', background: '#10377a', color: 'white' }}>
+              <IonCol size="1">No.</IonCol>
+              <IonCol>Training Type</IonCol>
+              <IonCol>Total Batches</IonCol>
+              <IonCol>Total Trainees</IonCol>
+            </IonRow>
+            {yearSummary.map((t, index) => (
+              <IonRow key={index}>
+                <IonCol size="1">{index + 1}</IonCol>
+                <IonCol>{t.training}</IonCol>
+                <IonCol>{t.batches}</IonCol>
+                <IonCol>{t.trainees}</IonCol>
+              </IonRow>
+            ))}
+          </IonGrid>
+          <IonText>
+            <b>Overall Trainees: {yearSummary.reduce((a, b) => a + b.trainees, 0)}</b>
+          </IonText>
+        </div>
+      ) : (
+        <div
+          ref={tableRef}
+          style={{
+            overflowX: "auto",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            padding: "10px"
+          }}
+        >
+          <IonGrid style={{ minWidth: '2600px', padding: 0 }}>
+            {/* HEADER ROW */}
+            <IonRow style={{ flexWrap: 'nowrap' }}>
+              <IonCol style={{ ...tableHeaderStyle, width: '50px', flex: 'none' }}>No.</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '200px', flex: 'none' }}>Lastname</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '200px', flex: 'none' }}>Firstname</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '200px', flex: 'none' }}>Middlename</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '60px', flex: 'none' }}>Ext</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Barangay</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>City</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Province</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Contact</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Email</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '150px', flex: 'none' }}>Gender</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Civil Status</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '300px', flex: 'none' }}>Employment</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '200px', flex: 'none' }}>Birthdate</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '60px', flex: 'none' }}>Age</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '300px', flex: 'none' }}>Birthplace</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '400px', flex: 'none' }}>Education</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '400px', flex: 'none' }}>Course</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '100px', flex: 'none' }}>Batch</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '150px', flex: 'none' }}>Scholarship</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '100px', flex: 'none' }}>Year</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '120px', flex: 'none' }}>Date Added</IonCol>
+            </IonRow>
 
-<div ref={tableRef}>
+            {/* DATA ROWS */}
+            {trainees.map((t, index) => (
+              <IonRow
+                key={t.id}
+                style={{
+                  textAlign: 'center',
+                  background: index % 2 === 0 ? '#fafafa' : '#ffffff',
+                  flexWrap: 'nowrap'
+                }}
+              >
+                <IonCol style={{ ...tableCellStyle, width: '50px', flex: 'none' }}>{index + 1}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '200px', flex: 'none' }}>{t.lastname}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '200px', flex: 'none' }}>{t.firstname}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '200px', flex: 'none' }}>{t.middlename || '-'}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '60px', flex: 'none' }}>{t.extension || '-'}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.barangay}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.city}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.province}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.contact}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.email}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '150px', flex: 'none' }}>{t.gender}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.civil_status}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '300px', flex: 'none' }}>{t.employment}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '200px', flex: 'none' }}>
+                  {t.birth_month} {t.birth_day}, {t.birth_year}
+                </IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '60px', flex: 'none' }}>{t.age}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '300px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {t.birthplace_city}, {t.birthplace_province}
+                </IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.educational_attainment}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.course}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '100px', flex: 'none' }}>{t.batch}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '150px', flex: 'none' }}>
+                  {t.scholarship === "Other" ? t.scholarship_other : t.scholarship}
+                </IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '100px', flex: 'none' }}>{t.year_enrolled}</IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '120px', flex: 'none' }}>
+                  {new Date(t.created_at).toLocaleDateString()}
+                </IonCol>
+              </IonRow>
+            ))}
+          </IonGrid>
+        </div>
+      )}
+    </IonContent>
 
-<h2>Year {selectedYear}</h2>
-
-<IonGrid>
-
-<IonRow style={{
-fontWeight:'bold',
-background:'#10377a',
-color:'white'
-}}>
-<IonCol size="1">No.</IonCol>
-<IonCol>Training Type</IonCol>
-<IonCol>Total Batches</IonCol>
-<IonCol>Total Trainees</IonCol>
-</IonRow>
-
-{yearSummary.map((t,index)=>(
-<IonRow key={index}>
-<IonCol size="1">{index+1}</IonCol>
-<IonCol>{t.training}</IonCol>
-<IonCol>{t.batches}</IonCol>
-<IonCol>{t.trainees}</IonCol>
-</IonRow>
-))}
-
-</IonGrid>
-
-<IonText>
-<b>Overall Trainees: {yearSummary.reduce((a,b)=>a+b.trainees,0)}</b>
-</IonText>
-
-</div>
-
-) : (
-
-<div ref={tableRef}>
-
-<IonGrid>
-
-<IonRow style={{
-fontWeight:'bold',
-borderBottom:'2px solid #333',
-background:'#10377a',
-color:'white',
-textAlign:'center'
-}}>
-<IonCol size="1">No.</IonCol>
-<IonCol>Barangay</IonCol>
-<IonCol>Name</IonCol>
-<IonCol>Gender</IonCol>
-<IonCol>Education</IonCol>
-<IonCol>IP</IonCol>
-<IonCol>Date</IonCol>
-<IonCol>Training Type</IonCol>
-</IonRow>
-
-{trainees.map((t, index) => (
-<IonRow key={t.id}>
-<IonCol size="1">{index + 1}</IonCol>
-<IonCol>{t.barangay}</IonCol>
-<IonCol>
-{t.lastname}, {t.firstname} {t.middlename || ''}
-</IonCol>
-<IonCol>{t.gender}</IonCol>
-<IonCol>{t.educational_attainment}</IonCol>
-<IonCol>
-{t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP'}
-</IonCol>
-<IonCol>
-{new Date(t.created_at).toLocaleDateString()}
-</IonCol>
-<IonCol>
-{trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
-{!batch && !selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
-</IonCol>
-</IonRow>
-))}
-
-</IonGrid>
-
-</div>
-
-)}
-
-      </IonContent>
-      <IonPopover
-  isOpen={showDownload}
-  onDidDismiss={() => setShowDownload(false)}
->
-  <IonList style={{minWidth:'200px'}}>
-
-    <IonItem button onClick={downloadExcel}>
-      <IonLabel>Download as Excel</IonLabel>
-    </IonItem>
-
-    <IonItem button onClick={handleDownloadPDF}>
-      <IonLabel>Download as PDF</IonLabel>
-    </IonItem>
-
-    <IonItem button onClick={downloadWord}>
-      <IonLabel>Download as Word</IonLabel>
-    </IonItem>
-
-  </IonList>
-</IonPopover>
-    </IonPage>
-  );
+    <IonPopover isOpen={showDownload} onDidDismiss={() => setShowDownload(false)}>
+      <IonList style={{ minWidth: '200px' }}>
+        <IonItem button onClick={downloadExcel}>
+          <IonLabel>Download as Excel</IonLabel>
+        </IonItem>
+        <IonItem button onClick={handleDownloadPDF}>
+          <IonLabel>Download as PDF</IonLabel>
+        </IonItem>
+        <IonItem button onClick={downloadWord}>
+          <IonLabel>Download as Word</IonLabel>
+        </IonItem>
+      </IonList>
+    </IonPopover>
+  </IonPage>
+);
 };
 
 export default TraineeList;

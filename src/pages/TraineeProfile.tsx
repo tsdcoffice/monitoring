@@ -1,22 +1,12 @@
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
-  IonButton,
-  IonToast,
-  IonButtons,
-  IonIcon
+  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
+  IonInput, IonSelect, IonSelectOption,
+  IonButton, IonToast, IonButtons, IonIcon,
+  IonGrid, IonRow, IonCol
 } from '@ionic/react';
 
 import { arrowBack } from 'ionicons/icons';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -24,19 +14,7 @@ const TraineeProfile: React.FC = () => {
 
   const history = useHistory();
 
-  const barangays = [
-    "Agusan Canyon","Alae","Dahilayan","Dalirig","Damilag","Dicklum",
-    "Guilang-guilang","Kalugmanan","Lindaban","Lingion","Lunocan",
-    "Maluko","Mambatangan","Mampayag","Mantibugao","Minsuro",
-    "San Miguel","Sankanan","Santiago","Santo Niño",
-    "Tankulan (Pob.)","Ticala"
-  ];
-
-  const ipTribes = [
-    "BUKIDNON","HIGAONON","MANOBO","MATIGSALUG",
-    "TALAANDIG","TIGWAHANON","UMAYAMNON"
-  ];
-
+  // ✅ COMPLETE TRAININGS
   const trainings = [
     "Barista","Barangay Health Services NC II","Bayong Making",
     "Beauty Care (Nail Care, Hair and Make-up)","Bookkeeping NC III",
@@ -52,307 +30,477 @@ const TraineeProfile: React.FC = () => {
     "Shielded Metal Arc Welding(SMAW) NC II"
   ];
 
-  const educationalAttainmentOptions = [
-    "Elementary Level","Elementary Graduate",
-    "High School Level","High School Graduate",
-    "Senior High School Graduate","College Level",
-    "College Graduate"
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  const classificationOptions = [
+    "4Ps Beneficiary","Displaced Workers","Family Members of AFP and PNP Wounded in-Action",
+    "Industry Workers","Out-of-School Youth","Rebel Returnees/Decommissioned Combatants",
+    "TESDA Alumni","Victim of Natural Disasters and Calamities",
+    "Agrarian Reform Beneficiary","Drug Dependents Surrenderees/Surrenderers",
+    "Farmers and Fishermen","Inmates and Detainees",
+    "OFW Dependent","TVET Trainers","Wounded-in-Action AFP & PNP Personnel",
+    "Balik Probinsya","Family Members of AFP and PNP Killed-in-Action",
+    "IP & Cultural Communities","MILF Beneficiary","RCEF-RESP","Student","Uniformed Personnel"
   ];
 
-  const initialFormState = {
-    lastname: '',
-    firstname: '',
-    middlename: '',
-    gender: '',
-    barangay: '',
-    is_ip: false,
-    ip_group: '',
+  const disabilityOptions = [
+    "Mental/Intellectual","Hearing Disability","Psychosocial Disability",
+    "Visual Disability","Speech Impairment","Disability Due to Chronic Illness",
+    "Orthopedic Disability","Multiple Disabilities","Learning Disability","Other"
+  ];
+
+  const scholarshipOptions = ["TWSP","PESFA","STEP","TTSP","Other"];
+  const educationOptions = [
+  "No Grade Completed",
+  "Elementary Undergraduate",
+  "Elementary Graduate",
+  "High School Undergraduate",
+  "High School Graduate",
+  "Junior High (K-12)",
+  "Senior High (K-12)",
+  "Post-Secondary Non-Tertiary/ Technical Vocational Course Undergraduate",
+  "Post-Secondary Non-Tertiary/ Technical Vocational Course Graduate",
+  "College Undergraduate",
+  "College Graduate",
+  "Masteral",
+  "Doctorate"
+];
+
+  // FORM DATA
+  const [formData, setFormData] = useState<any>({
+    lastname:'', firstname:'', middlename:'', extension:'',
+    barangay:'', city:'', province:'', email:'', contact:'', 
+    gender:'', civil_status:'', employment:'',
+    birth_month:'', birth_day:'', birth_year:'', age:'',
+    birthplace_city:'', birthplace_province:'',
     educational_attainment: '',
-    course: '',
-    batch: ''
-  };
+    classification:[],
+    disability:'', disability_other:'',
+    course:'',
+    batch:'', // manual input now
+    scholarship:'', scholarship_other:'',
+    year_enrolled: ''
+  });
 
-  const [formData, setFormData] = useState(initialFormState);
   const [showToast, setShowToast] = useState(false);
-   const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const firstRef = useRef<HTMLIonInputElement>(null);
-  const middleRef = useRef<HTMLIonInputElement>(null);
-  const buttonRef = useRef<HTMLIonButtonElement>(null);
-
-  const handleChange = (field: string, value: any) => {
-
-    const uppercaseFields = ['lastname','firstname','middlename','ip_group'];
-
-    if (uppercaseFields.includes(field) && value) {
-      value = value.toUpperCase();
-    }
-
+  // ✅ AUTO CAPSLOCK for text inputs ONLY
+  const handleChange = (field: string, value: any, isTextInput = true) => {
+    if (isTextInput && typeof value === "string") value = value.toUpperCase();
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleEnterNext = (nextRef: any) => (e: any) => {
-    if (e.key === "Enter") {
+  // ✅ ENTER KEY TO NEXT FIELD
+  const inputRefs: any = {
+    lastname: useRef<HTMLIonInputElement>(null),
+    firstname: useRef<HTMLIonInputElement>(null),
+    middlename: useRef<HTMLIonInputElement>(null),
+    extension: useRef<HTMLIonInputElement>(null),
+    barangay: useRef<HTMLIonInputElement>(null),
+    city: useRef<HTMLIonInputElement>(null),
+    province: useRef<HTMLIonInputElement>(null),
+    email: useRef<HTMLIonInputElement>(null),
+    contact: useRef<HTMLIonInputElement>(null),
+    batch: useRef<HTMLIonInputElement>(null)
+  };
+
+  const handleEnter = (e: any, nextRef: any) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      nextRef?.current?.setFocus();
+      nextRef.current?.setFocus();
     }
   };
 
-  // ✅ WRAP THE LOGIC IN THIS FUNCTION
+
+
+  // ✅ SAVE TRAINEE
   const saveTrainee = async () => {
-    if (isSaving) return;
+    if (!formData.year_enrolled) {
+  alert("Year Enrolled is required!");
+  return;
+}
 
-    const requiredFields = [
-      formData.lastname,
-      formData.firstname,
-      formData.gender,
-      formData.barangay,
-      formData.educational_attainment,
-      formData.course,
-      formData.batch
-    ];
+  if (isSaving) return;
+  setIsSaving(true);
 
-    if (requiredFields.some(v => v === '' || v === null || v === undefined)) {
-      alert("Please fill in all required fields.");
-      return;
-    }
+  try {
+    const { error } = await supabase.from('trainees').insert([
+      {
+        lastname: formData.lastname,
+        firstname: formData.firstname,
+        middlename: formData.middlename,
+        extension: formData.extension,
 
-    if (formData.is_ip && !formData.ip_group) {
-      alert("Please select IP Tribe.");
-      return;
-    }
+        barangay: formData.barangay,
+        city: formData.city,
+        province: formData.province,
+        email: formData.email,
+        contact: formData.contact,
+      
 
-    setIsSaving(true);
+        gender: formData.gender,
+        civil_status: formData.civil_status,
+        employment: formData.employment,
 
-    try {
-      const { data: trainingData, error: trainingError } = await supabase
-        .from('training_types')
-        .select('id')
-        .eq('name', formData.course)
-        .single();
+        birth_month: formData.birth_month,
+        birth_day: Number(formData.birth_day),
+        birth_year: Number(formData.birth_year),
+        age: Number(formData.age),
 
-      if (trainingError || !trainingData) {
-        alert("Training type not found in database.");
-        return;
+        birthplace_city: formData.birthplace_city,
+        birthplace_province: formData.birthplace_province,
+
+        educational_attainment: formData.educational_attainment,
+
+        classification: formData.classification || [],
+
+        disability: formData.disability,
+        disability_other: formData.disability_other,
+
+        course: formData.course,
+        batch: Number(formData.batch),
+
+        scholarship: formData.scholarship,
+        scholarship_other: formData.scholarship_other,
+
+        year_enrolled: Number(formData.year_enrolled),
       }
+    ]);
+    
 
-      const { error } = await supabase.from('trainees').insert([
-        {
-          lastname: formData.lastname,
-          firstname: formData.firstname,
-          middlename: formData.middlename,
-          gender: formData.gender,
-          barangay: formData.barangay,
-          is_ip: formData.is_ip,
-          ip_group: formData.is_ip ? formData.ip_group : null,
-          educational_attainment: formData.educational_attainment,
-          training_type_id: trainingData.id,
-          batch: formData.batch
-        }
-      ]);
+    if (error) throw error;
 
-      if (error) throw error;
+    setShowToast(true);
 
-      setShowToast(true);
-      setFormData(initialFormState); // Optional: clear form after success
+    // RESET FORM
+    setFormData({
+      lastname:'', firstname:'', middlename:'', extension:'',
+      barangay:'', city:'', province:'', email:'', contact:'', 
+      gender:'', civil_status:'', employment:'',
+      birth_month:'', birth_day:'', birth_year:'', age:'',
+      birthplace_city:'', birthplace_province:'',
+      classification:[],
+      disability:'', disability_other:'',
+      course:'', batch:'',
+      scholarship:'', scholarship_other:'',
+      educational_attainment: '',
+      year_enrolled: ''
+    });
 
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  } catch (err:any) {
+    alert(err.message);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   return (
     <IonPage>
 
       <IonHeader>
-        <IonToolbar style={{ '--background': '#10377a', '--color': '#ffffff' }}>
-
-          {/* DIRECT DASHBOARD BACK BUTTON */}
+        <IonToolbar style={{ '--background': '#10377a', '--color': '#fff' }}>
           <IonButtons slot="start">
             <IonButton onClick={() => history.replace('/dashboard')}>
               <IonIcon icon={arrowBack} />
             </IonButton>
           </IonButtons>
-
-          <IonTitle style={{ fontWeight: 600 }}>TRAINEE PROFILING FORM</IonTitle>
-
+          <IonTitle>LEARNERS PROFILE FORM</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
 
-        <IonItem>
-          <IonLabel position="stacked">Last Name *</IonLabel>
+        {/* 1 PROFILE */}
+        <h3>1. LEARNER / MANPOWER PROFILE</h3>
+
+        <IonGrid>
+          <IonRow>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.lastname}
+                placeholder="LAST NAME"
+                value={formData.lastname}
+                onIonChange={e=>handleChange('lastname',e.detail.value)}
+                onKeyDown={e=>handleEnter(e,inputRefs.firstname)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.firstname}
+                placeholder="FIRST NAME"
+                value={formData.firstname}
+                onIonChange={e=>handleChange('firstname',e.detail.value)}
+                onKeyDown={e=>handleEnter(e,inputRefs.middlename)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.middlename}
+                placeholder="MIDDLE NAME"
+                value={formData.middlename}
+                onIonChange={e=>handleChange('middlename',e.detail.value)}
+                onKeyDown={e=>handleEnter(e,inputRefs.extension)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.extension}
+                placeholder="EXTENSION"
+                value={formData.extension}
+                onIonChange={e=>handleChange('extension',e.detail.value)}
+              />
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.barangay}
+                placeholder="BARANGAY"
+                value={formData.barangay}
+                onIonChange={e=>handleChange('barangay',e.detail.value)}
+                onKeyDown={e=>handleEnter(e,inputRefs.city)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.city}
+                placeholder="CITY"
+                value={formData.city}
+                onIonChange={e=>handleChange('city',e.detail.value)}
+                onKeyDown={e=>handleEnter(e,inputRefs.province)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.province}
+                placeholder="PROVINCE"
+                value={formData.province}
+                onIonChange={e=>handleChange('province',e.detail.value)}
+              />
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.email}
+                placeholder="EMAIL / FACEBOOK"
+                value={formData.email}
+                onIonChange={e=>handleChange('email',e.detail.value)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                ref={inputRefs.contact}
+                type="number"
+                placeholder="CONTACT NO."
+                value={formData.contact}
+                onIonChange={e=>handleChange('contact',e.detail.value)}
+              />
+            </IonCol>
+          </IonRow>
+        </IonGrid>
+
+        {/* 2 PERSONAL */}
+        <h3>2. PERSONAL INFORMATION</h3>
+
+        <IonGrid>
+          <IonRow>
+            <IonCol>
+              <IonSelect
+                placeholder="SEX"
+                value={formData.gender}
+                onIonChange={e=>handleChange('gender', e.detail.value, false)}
+              >
+                <IonSelectOption value="MALE">Male</IonSelectOption>
+                <IonSelectOption value="FEMALE">Female</IonSelectOption>
+              </IonSelect>
+            </IonCol>
+
+            <IonCol>
+              <IonSelect
+                placeholder="CIVIL STATUS"
+                value={formData.civil_status}
+                onIonChange={e=>handleChange('civil_status', e.detail.value, false)}
+              >
+                <IonSelectOption value="SINGLE">Single</IonSelectOption>
+                <IonSelectOption value="MARRIED">Married</IonSelectOption>
+                <IonSelectOption value="SEPARATED/DIVORCED/ANNULLED">Separated/Divorced/Annulled</IonSelectOption>
+                <IonSelectOption value="WIDOW/ER">Widow/er</IonSelectOption>
+                <IonSelectOption value="COMMON LAW/LIVE-IN">Common Law/Live-in</IonSelectOption>
+              </IonSelect>
+            </IonCol>
+
+            <IonCol>
+              <IonSelect
+                placeholder="EMPLOYMENT"
+                value={formData.employment}
+                onIonChange={e=>handleChange('employment', e.detail.value, false)}
+              >
+                <IonSelectOption value="WAGE-EMPLOYED">Wage-Employed</IonSelectOption>
+                <IonSelectOption value="UNDEREMPLOYED">Underemployed</IonSelectOption>
+                <IonSelectOption value="SELF-EMPLOYED">Self-Employed</IonSelectOption>
+                <IonSelectOption value="UNEMPLOYED">Unemployed</IonSelectOption>
+              </IonSelect>
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol>
+              <IonSelect
+                placeholder="MONTH"
+                value={formData.birth_month}
+                onIonChange={e=>handleChange('birth_month', e.detail.value, false)}
+              >
+                {months.map(m => <IonSelectOption key={m} value={m}>{m}</IonSelectOption>)}
+              </IonSelect>
+            </IonCol>
+
+            <IonCol>
+              <IonSelect
+                placeholder="DAY"
+                value={formData.birth_day}
+                onIonChange={e=>handleChange('birth_day', e.detail.value, false)}
+              >
+                {days.map(d => <IonSelectOption key={d} value={d}>{d}</IonSelectOption>)}
+              </IonSelect>
+            </IonCol>
+
+            <IonCol>
+              <IonInput
+                type="number"
+                placeholder="YEAR"
+                value={formData.birth_year}
+                onIonChange={e=>handleChange('birth_year', e.detail.value, false)}
+              />
+            </IonCol>
+
+            <IonCol>
+              <IonInput
+                type="number"
+                placeholder="AGE"
+                value={formData.age}
+                onIonChange={e=>handleChange('age', e.detail.value, false)}
+              />
+            </IonCol>
+          </IonRow>
+
+          <IonRow>
+            <IonCol>
+              <IonInput
+                placeholder="BIRTHPLACE CITY"
+                value={formData.birthplace_city}
+                onIonChange={e=>handleChange('birthplace_city', e.detail.value)}
+              />
+            </IonCol>
+            <IonCol>
+              <IonInput
+                placeholder="BIRTHPLACE PROVINCE"
+                value={formData.birthplace_province}
+                onIonChange={e=>handleChange('birthplace_province', e.detail.value)}
+              />
+            </IonCol>
+          </IonRow>
+        </IonGrid>
+
+        <IonRow>
+  <IonCol>
+    <IonSelect
+      placeholder="EDUCATIONAL ATTAINMENT"
+      value={formData.educational_attainment}
+      onIonChange={e=>handleChange('educational_attainment', e.detail.value, false)}
+    >
+      {educationOptions.map(e => (
+        <IonSelectOption key={e} value={e}>{e}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonCol>
+</IonRow>
+
+
+        {/* 3 CLASSIFICATION */}
+        <h3>3. CLASSIFICATION</h3>
+        <IonSelect
+          multiple
+          value={formData.classification}
+          onIonChange={e=>handleChange('classification', e.detail.value, false)}
+        >
+          {classificationOptions.map(c=><IonSelectOption key={c} value={c}>{c}</IonSelectOption>)}
+        </IonSelect>
+
+        {/* 4 DISABILITY */}
+        <h3>4. TYPE OF DISABILITY</h3>
+        <IonSelect
+          value={formData.disability}
+          onIonChange={e=>handleChange('disability', e.detail.value, false)}
+        >
+          {disabilityOptions.map(d=><IonSelectOption key={d} value={d}>{d}</IonSelectOption>)}
+        </IonSelect>
+
+        {formData.disability === "Other" && (
           <IonInput
-            placeholder="LASTNAME"
-            value={formData.lastname}
-            onIonChange={e => handleChange('lastname', e.detail.value)}
-            onKeyDown={handleEnterNext(firstRef)}
+            placeholder="SPECIFY"
+            onIonChange={e=>handleChange('disability_other', e.detail.value)}
           />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">First Name *</IonLabel>
-          <IonInput
-            ref={firstRef}
-            placeholder="FIRSTNAME"
-            value={formData.firstname}
-            onIonChange={e => handleChange('firstname', e.detail.value)}
-            onKeyDown={handleEnterNext(middleRef)}
-          />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Middle Name</IonLabel>
-          <IonInput
-            ref={middleRef}
-            placeholder="MIDDLENAME"
-            value={formData.middlename}
-            onIonChange={e => handleChange('middlename', e.detail.value)}
-          />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Gender *</IonLabel>
-          <IonSelect
-            interface="popover"
-            value={formData.gender}
-            onIonChange={e => handleChange('gender', e.detail.value)}
-          >
-            <IonSelectOption value="Male">Male</IonSelectOption>
-            <IonSelectOption value="Female">Female</IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Barangay Address *</IonLabel>
-          <IonSelect
-            interface="popover"
-            value={formData.barangay}
-            onIonChange={e => handleChange('barangay', e.detail.value)}
-          >
-            {barangays.map(b => (
-              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-            ))}
-          </IonSelect>
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Are you IP?</IonLabel>
-          <IonSelect
-            interface="popover"
-            value={formData.is_ip}
-            onIonChange={e => handleChange('is_ip', e.detail.value)}
-          >
-            <IonSelectOption value={true}>Yes</IonSelectOption>
-            <IonSelectOption value={false}>No</IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        {formData.is_ip && (
-          <IonItem>
-            <IonLabel position="stacked">IP Tribe *</IonLabel>
-            <IonSelect
-              interface="popover"
-              value={formData.ip_group}
-              onIonChange={e => handleChange('ip_group', e.detail.value)}
-            >
-              {ipTribes.map(tribe => (
-                <IonSelectOption key={tribe} value={tribe}>
-                  {tribe}
-                </IonSelectOption>
-              ))}
-            </IonSelect>
-          </IonItem>
         )}
 
-        <IonItem>
-          <IonLabel position="stacked">Educational Attainment *</IonLabel>
-          <IonSelect
-            interface="popover"
-            value={formData.educational_attainment}
-            onIonChange={e => handleChange('educational_attainment', e.detail.value)}
-          >
-            {educationalAttainmentOptions.map(level => (
-              <IonSelectOption key={level} value={level}>
-                {level}
-              </IonSelectOption>
-            ))}
-          </IonSelect>
-        </IonItem>
+        {/* 5 COURSE */}
+        <h3>5. COURSE / QUALIFICATION</h3>
+        <IonSelect
+          value={formData.course}
+          onIonChange={e=>handleChange('course', e.detail.value, false)}
+        >
+          {trainings.map(t=><IonSelectOption key={t} value={t}>{t}</IonSelectOption>)}
+        </IonSelect>
 
-        <style>
-  {`
-    ion-action-sheet.no-cancel-sheet .action-sheet-cancel {
-      display: none !important;
-    }
-  `}
-</style>
+        {/* BATCH MANUAL INPUT */}
+        {formData.course && (
+          <IonInput
+            ref={inputRefs.batch}
+            type="number"
+            min={1}
+            max={1000}
+            placeholder="BATCH (1-1000)"
+            value={formData.batch}
+            onIonChange={e=>handleChange('batch', e.detail.value, false)}
+          />
+        )}
 
-<IonItem>
-  <IonLabel position="stacked">Type of Training *</IonLabel>
-  <IonSelect
-    interface="action-sheet"
-    interfaceOptions={{
-      cssClass: 'no-cancel-sheet' // Importante ni para kini ra nga select ang ma-apektuhan
-    }}
-    
-    value={formData.course}
-    onIonChange={e => handleChange('course', e.detail.value)}
-  >
-    {trainings.map(training => (
-      <IonSelectOption key={training} value={training}>
-        {training}
-      </IonSelectOption>
-    ))}
-  </IonSelect>
-</IonItem>
+        {/* 6 SCHOLARSHIP */}
+        <h3>6. TYPE OF SCHOLARSHIP (OPTIONAL)</h3>
+        <IonSelect
+          value={formData.scholarship}
+          onIonChange={e=>handleChange('scholarship', e.detail.value, false)}
+        >
+          {scholarshipOptions.map(s=><IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
+        </IonSelect>
 
-<IonItem>
-  <IonLabel position="stacked">Batch *</IonLabel>
-  <IonInput
+        {formData.scholarship === "Other" && (
+          <IonInput
+            placeholder="SPECIFY"
+            onIonChange={e=>handleChange('scholarship_other', e.detail.value)}
+          />
+        )}
+
+        <IonInput
   type="number"
-  min="1"
-  max="1000"
-  placeholder="Enter Batch Number"
-  value={formData.batch}
-
-  onIonChange={e => {
-    const value = e.detail.value;
-
-    if (!value) {
-      handleChange('batch', '');
-      return;
-    }
-
-    const num = parseInt(value);
-
-    if (num >= 1 && num <= 1000) {
-      handleChange('batch', num);
-    }
-  }}
-
-  onKeyDown={(e:any)=>{
-    if(e.key === "Enter"){
-      e.preventDefault()
-       setTimeout(()=>{
-      saveTrainee()
-      },100)
-    }
-  }}
+  placeholder="YEAR ENROLLED (e.g. 2025)"
+  value={formData.year_enrolled}
+  onIonChange={e=>handleChange('year_enrolled', e.detail.value, false)}
 />
-</IonItem>
 
-        <IonButton ref={buttonRef} expand="block" onClick={saveTrainee} disabled={isSaving} className="ion-margin-top">  {isSaving ? "Saving..." : "Save Trainee"}
+        <IonButton expand="block" onClick={saveTrainee} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Trainee"}
         </IonButton>
 
         <IonToast
           isOpen={showToast}
-          message="Trainee saved successfully!"
+          message="Saved successfully!"
           duration={1500}
-          onDidDismiss={() => setShowToast(false)}
+          onDidDismiss={()=>setShowToast(false)}
         />
 
       </IonContent>

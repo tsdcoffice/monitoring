@@ -76,44 +76,45 @@ const BatchList:React.FC = () => {
 
 }, [slug])
 
-  const fetchBatches = async () => {
+
+const fetchBatches = async () => {
 
   const trainingName = courseSlugMap[slug];
 
-  // get training type id
-  const { data: typeData } = await supabase
-    .from("training_types")
-    .select("id")
-    .eq("name", trainingName)
-    .single();
-
-  if (!typeData) {
+  if (!trainingName) {
     setBatches([]);
     return;
   }
 
-  // get all trainees under that training type
-  const { data: trainees } = await supabase
+  // 🔥 GET trainees directly (NO training_types anymore)
+  const { data, error } = await supabase
     .from("trainees")
     .select("batch")
-    .eq("training_type_id", typeData.id);
+    .eq("course", trainingName);
 
-  if (!trainees || trainees.length === 0) {
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (!data || data.length === 0) {
     setBatches([]);
     return;
   }
 
-  // count trainees per batch
+  // 🔥 COUNT per batch
   const batchMap: { [key: number]: number } = {};
 
-  trainees.forEach((t: any) => {
+  data.forEach((t: any) => {
     if (!t.batch) return;
 
-    if (!batchMap[t.batch]) {
-      batchMap[t.batch] = 0;
+    const batchNum = Number(t.batch);
+
+    if (!batchMap[batchNum]) {
+      batchMap[batchNum] = 0;
     }
 
-    batchMap[t.batch]++;
+    batchMap[batchNum]++;
   });
 
   // convert to array
@@ -122,7 +123,7 @@ const BatchList:React.FC = () => {
     count: batchMap[Number(b)]
   }));
 
-  // sort batch numbers
+  // sort ascending
   batchArray.sort((a, b) => a.batch - b.batch);
 
   setBatches(batchArray);

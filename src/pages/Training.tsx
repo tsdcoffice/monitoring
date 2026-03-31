@@ -69,32 +69,31 @@ const Training: React.FC = () => {
   }, []);
 
   const fetchCounts = async () => {
-    const { data, error } = await supabase
-      .from('trainees')
-      .select(`
-        id,
-        training_types (
-          name
-        )
-      `);
+  const { data, error } = await supabase
+    .from('trainees')
+    .select('id, course');
 
-    if (error) {
-      console.error(error);
-      return;
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const counts: { [slug: string]: number } = {};
+  courses.forEach(course => (counts[course.slug] = 0));
+
+  data?.forEach((trainee: any) => {
+    const courseName = trainee.course;
+
+    const courseObj = courses.find(c => c.name === courseName);
+
+    if (courseObj) {
+      counts[courseObj.slug]++;
     }
+  });
 
-    const counts: { [slug: string]: number } = {};
-    courses.forEach(course => (counts[course.slug] = 0));
-
-    data?.forEach((trainee: any) => {
-      const trainingName = trainee.training_types?.name;
-      const courseObj = courses.find(c => c.name === trainingName);
-      if (courseObj) counts[courseObj.slug]++;
-    });
-
-    setCourseCounts(counts);
-    setTotalTrainees(data?.length || 0);
-  };
+  setCourseCounts(counts);
+  setTotalTrainees(data?.length || 0);
+};
 
   const goToTrainees = (slug: string) => {
 
