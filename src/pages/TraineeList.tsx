@@ -60,7 +60,7 @@ interface Trainee {
   disability_other: string;
 
   course: string;
-  batch: string;
+  batch: number;
 
   scholarship: string;
   scholarship_other: string;
@@ -78,7 +78,7 @@ interface TrainingType {
 interface BatchDetails {
   id: string;
   course: string;
-  batch: string;
+  batch: number;
   start_date: string;
   end_date: string;
   duration_hours: number;
@@ -181,6 +181,49 @@ const overallTrainees = yearSummary.reduce(
   }, [urlSearch]);
   const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
 
+  /* =========================
+   FETCH BATCH DETAILS (FIXED)
+========================== */
+useEffect(() => {
+  const fetchBatchDetails = async () => {
+    if (!slug || !batch) return;
+
+    const trainingName = courseSlugMap[slug];
+
+    const { data, error } = await supabase
+      .from('training_batches')
+      .select('*')
+      .eq('course', trainingName)
+      .eq('batch', Number(batch))
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching batch details:", error);
+      return;
+    }
+
+    if (data) {
+      setBatchDetails(data);
+
+      // 👉 IMPORTANT: para mo stay sa UI after refresh
+      setStartDate(data.start_date || "");
+      setEndDate(data.end_date || "");
+      setDurationHours(data.duration_hours || "");
+      setTrainor(data.trainor || "");
+      setVenue(data.venue || "");
+    } else {
+      setBatchDetails(null);
+      setStartDate("");
+      setEndDate("");
+      setDurationHours("");
+      setTrainor("");
+      setVenue("");
+    }
+  };
+
+  fetchBatchDetails();
+}, [slug, batch]);
+
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedTrainingType, setSelectedTrainingType] = useState('');
   const [selectedBatchFilter, setSelectedBatchFilter] = useState('');
@@ -237,197 +280,52 @@ const overallTrainees = yearSummary.reduce(
   fetchFilteredTrainingTypes();
 }, [selectedBarangay, trainingTypes]);
 
-  /* =========================
-   FETCH UNIQUE BATCHES FROM TRAINEES
-========================== */
-useEffect(() => {
-  const fetchAvailableBatches = async () => {
-
-    if (!selectedTrainingType && !selectedBarangay) {
-      setAvailableBatches([]);
-      setSelectedBatchFilter('');
-      return;
-    }
-
-    let query = supabase
-      .from('trainees')
-      .select('batch');
-
-    if (selectedTrainingType) {
-  query = query.eq('course', selectedTrainingType);
-}
-
-    if (selectedBarangay) {
-      query = query.eq('barangay', selectedBarangay);
-    }
-
-    const { data } = await query.not('batch', 'is', null);
-
-    if (data) {
-      const uniqueBatches = Array.from(
-        new Set(data.map(item => item.batch))
-      ).sort();
-
-      setAvailableBatches(uniqueBatches);
-    }
-  };
-
-  fetchAvailableBatches();
-}, [selectedTrainingType, selectedBarangay]);
-
 useEffect(() => {
   setSelectedTrainingType('');
   setSelectedBatchFilter('');
 }, [selectedBarangay]);
 
 useEffect(() => {
-  setSelectedBatchFilter('');
-}, [selectedTrainingType]);
-
-// I-paste kini pagkahuman sa availableBatches useEffect
-useEffect(() => {
-  const fetchSelectedBatchDetails = async () => {
-    // Kung wala'y napili nga training type OR batch filter, i-clear ang details
-    if (!selectedTrainingType || !selectedBatchFilter) {
-      setBatchDetails(null);
-      return;
-    }
-
-    const { data } = await supabase
-      .from('training_batches')
-      .select('*')
-      .eq('training_type_id', selectedTrainingType)
-      .eq('batch', selectedBatchFilter)
-      .maybeSingle();
-
-    if (data) {
-      setBatchDetails(data);
-    } else {
-      setBatchDetails(null);
-    }
-  };
-  fetchSelectedBatchDetails();
-}, [selectedTrainingType, selectedBatchFilter]);
+  if (selectedTrainingType && selectedTrainingType !== batchDetails?.course) {
+    setSelectedBatchFilter('');
+  }
+}, [selectedTrainingType, batchDetails]);
 
   /* =========================
      FETCH TRAINEES
   ========================== */
-  useEffect(() => {
+// BAG-O NGA CODE
+useEffect(() => {
+  const fetchTrainees = async () => {
+    let query = supabase.from('trainees').select('*');
 
-    const fetchTrainees = async () => {
-
-      let query = supabase.from('trainees').select('*');
-
-      if (slug && slug !== 'all') {
-
-  const trainingName = courseSlugMap[slug];
-
-  query = query.eq('course', trainingName);
-
-  if (batch) {
-    query = query.eq('batch', batch);
-  }
-}
-
-        if (debouncedSearch || urlSearch) {
-          const searchValue = debouncedSearch || urlSearch;
-
-          query = query.or(
-            `firstname.ilike.%${searchValue}%,lastname.ilike.%${searchValue}%`
-          );
-        }
-
-      if (selectedBarangay) {
-        query = query.eq('barangay', selectedBarangay);
+    // Filter by Course (Slug)
+    if (slug && slug !== 'all') {
+      const trainingName = courseSlugMap[slug];
+      query = query.eq('course', trainingName);
+      
+      // Filter by Batch (Priority: URL param, fallback to Filter state)
+      const activeBatch = batch || selectedBatchFilter;
+      if (activeBatch) {
+        query = query.eq('batch', Number(activeBatch));
       }
-
-      if (selectedTrainingType) {
-  query = query.eq('course', selectedTrainingType);
-}
-
-      if (selectedBatchFilter) {
-        query = query.eq('batch', selectedBatchFilter);
-      }
-
-      // ✅ YEAR FILTER (FIX)
-if (selectedYear) {
-  const start = `${selectedYear}-01-01`;
-  const end = `${selectedYear}-12-31`;
-
-  query = query
-    .gte('created_at', start)
-    .lte('created_at', end);
-}
-
-
-      switch (sortOption) {
-        case 'az':
-          query = query.order('lastname', { ascending: true });
-          break;
-        case 'za':
-          query = query.order('lastname', { ascending: false });
-          break;
-        case 'date_asc':
-          query = query.order('created_at', { ascending: true });
-          break;
-        default:
-          query = query.order('created_at', { ascending: false });
-      }
-
-      const { data } = await query;
-      setTrainees(data || []);
-    };
-
-    fetchTrainees();
-
-  }, [
-    slug,
-    debouncedSearch,
-    urlSearch,
-    selectedBarangay,
-    selectedTrainingType,
-    selectedBatchFilter,
-     selectedYear, // ✅ ADD THIS
-    sortOption
-  ]);
-
-  useEffect(() => {
-
-  const fetchBatchDetails = async () => {
-
-    if (!slug || !batch) return;
-
-    const trainingName = courseSlugMap[slug];
-
-    const { data: typeData } = await supabase
-      .from('training_types')
-      .select('id')
-      .eq('name', trainingName)
-      .single();
-
-    if (!typeData) return;
-
-    const { data } = await supabase
-      .from('training_batches')
-      .select('*')
-      .eq('training_type_id', typeData.id)
-      .eq('batch', batch)
-      .single();
-
-    if (data) {
-      setBatchDetails(data);
-      setStartDate(data.start_date || "");
-    setEndDate(data.end_date || "");
-    setDurationHours(data.duration_hours || "");
-    setTrainor(data.trainor || "");
-    setVenue(data.venue || "");
+    } else {
+      // Logic para sa "All Trainees" page
+      if (selectedTrainingType) query = query.eq('course', selectedTrainingType);
+      if (selectedBatchFilter) query = query.eq('batch', Number(selectedBatchFilter));
     }
 
+    if (debouncedSearch) {
+      query = query.or(`firstname.ilike.%${debouncedSearch}%,lastname.ilike.%${debouncedSearch}%`);
+    }
+
+    if (selectedBarangay) query = query.eq('barangay', selectedBarangay);
+
+    const { data } = await query;
+    setTrainees(data || []);
   };
-
-  fetchBatchDetails();
-
-}, [slug, batch]);
+  fetchTrainees();
+}, [slug, batch, debouncedSearch, selectedBarangay, selectedTrainingType, selectedBatchFilter, selectedYear, sortOption]);
 
   const resetFilters = () => {
   setSelectedBarangay('');
@@ -1019,37 +917,55 @@ worksheet["!cols"] = selectedYear
 };
 
 const saveBatchDetails = async () => {
-
-  if (!slug || !batch) return;
+  // 1. Siguraduhon nato nga naay slug ug batch gikan sa URL
+  if (!slug || !batch) {
+    alert("Missing course or batch information.");
+    return;
+  }
 
   const trainingName = courseSlugMap[slug];
 
-  const { data: typeData } = await supabase
-    .from("training_types")
-    .select("id")
-    .eq("name", trainingName)
-    .single();
-
-  if (!typeData) return;
-
+  // 2. Prepare ang payload (Siguraduhon nga ang types match sa DB)
   const payload = {
-    training_type_id: typeData.id,
-    batch: batch,
-    start_date: startDate,
-    end_date: endDate,
-    duration_hours: durationHours,
-    trainor: trainor,
-    venue: venue
+    course: trainingName,
+    batch: Number(batch),
+    // Gamit og null kon empty ang string para dili mag-error ang Postgres date/int fields
+    start_date: startDate || null,
+    end_date: endDate || null,
+    duration_hours: durationHours === "" ? null : Number(durationHours),
+    trainor: trainor || null,
+    venue: venue || null
   };
 
-  const { error } = await supabase
+  console.log("Saving payload:", payload);
+
+  // 3. KINI ANG IMONG GIPANGUTANA (Ang Upsert Logic)
+  const { data, error } = await supabase
     .from("training_batches")
     .upsert(payload, {
-      onConflict: "training_type_id,batch"
-    });
+      onConflict: "course,batch", 
+    })
+    .select(); // .select() para makuha ang updated row
 
-  if (!error) {
-    alert("Batch details saved!");
+  if (error) {
+    console.error("SAVE ERROR:", error);
+    // Mas maayo i-alert ang error.message para mahibal-an nato ang rason (e.g. Constraint error)
+    alert(`Error saving batch details: ${error.message}`);
+  } else {
+    alert("Batch details saved successfully!");
+    
+    // 4. I-update ang local state para makita dayon ang kausaban sa UI
+    if (data && data.length > 0) {
+  const saved = data[0];
+  setBatchDetails(saved);
+  setStartDate(saved.start_date || "");
+  setEndDate(saved.end_date || "");
+  setDurationHours(saved.duration_hours || "");
+  setTrainor(saved.trainor || "");
+  setVenue(saved.venue || "");
+  setSelectedTrainingType(saved.course);      // ✅ keep filter consistent
+  setSelectedBatchFilter(String(saved.batch)); // ✅ keep filter consistent
+}
   }
 };
 
@@ -1440,57 +1356,70 @@ borderRadius:"6px"
 <IonCol>Action</IonCol>
 </IonRow>
 
-<IonRow>
+<IonRow style={{ alignItems: 'center' }}>
+  {/* 1. Batch Number gikan sa URL */}
+  <IonCol>{batch}</IonCol>
 
-<IonCol>{batch}</IonCol>
+  {/* 2. Start Date Input */}
+  <IonCol>
+    <IonInput
+      type="date"
+      value={startDate || ""}
+      onIonInput={e => setStartDate(e.detail.value!)}
+      style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+    />
+  </IonCol>
 
-<IonCol>
-<IonInput
-type="date"
-value={startDate}
-onIonChange={e => setStartDate(e.detail.value!)}
-/>
-</IonCol>
+  {/* 3. End Date Input */}
+  <IonCol>
+    <IonInput
+      type="date"
+      value={endDate || ""}
+      onIonInput={e => setEndDate(e.detail.value!)}
+      style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+    />
+  </IonCol>
 
-<IonCol>
-<IonInput
-type="date"
-value={endDate}
-onIonChange={e => setEndDate(e.detail.value!)}
-/>
-</IonCol>
+  {/* 4. Duration Input */}
+  <IonCol>
+    <IonInput
+      type="number"
+      value={durationHours}
+      onIonInput={e => {
+        const val = e.detail.value;
+        setDurationHours(val === "" ? "" : Number(val));
+      }}
+      placeholder="Hrs"
+      style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+    />
+  </IonCol>
 
-<IonCol>
-<IonInput
-type="number"
-value={durationHours}
-onIonChange={e => setDurationHours(Number(e.detail.value) || 0)}
-placeholder="Hours"
-/>
-</IonCol>
+  {/* 5. Trainor Input */}
+  <IonCol>
+    <IonInput
+      value={trainor || ""}
+      onIonInput={e => setTrainor(e.detail.value!)}
+      placeholder="Trainor"
+      style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+    />
+  </IonCol>
 
-<IonCol>
-<IonInput
-value={trainor}
-onIonChange={e => setTrainor(e.detail.value!)}
-placeholder="Trainor"
-/>
-</IonCol>
+  {/* 6. Venue Input */}
+  <IonCol>
+    <IonInput
+      value={venue || ""}
+      onIonInput={e => setVenue(e.detail.value!)}
+      placeholder="Venue"
+      style={{ border: '1px solid #ddd', borderRadius: '4px' }}
+    />
+  </IonCol>
 
-<IonCol>
-<IonInput
-value={venue}
-onIonChange={e => setVenue(e.detail.value!)}
-placeholder="Venue"
-/>
-</IonCol>
-
-<IonCol>
-<IonButton size="small" onClick={saveBatchDetails}>
-Save
-</IonButton>
-</IonCol>
-
+  {/* 7. Save Button */}
+  <IonCol>
+    <IonButton size="small" expand="block" onClick={saveBatchDetails}>
+      Save
+    </IonButton>
+  </IonCol>
 </IonRow>
 
 </IonGrid>
