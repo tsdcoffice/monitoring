@@ -18,6 +18,8 @@ import {
   IonIcon,
   IonInput,
   IonSearchbar,
+  IonSelect,
+  IonSelectOption,
   useIonViewWillEnter
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
@@ -63,15 +65,52 @@ const Training: React.FC = () => {
   const [courseCounts, setCourseCounts] = useState<{ [slug: string]: number }>({});
   const [totalTrainees, setTotalTrainees] = useState(0);
    const [searchText, setSearchText] = useState('');
+   const [selectedYear, setSelectedYear] = useState('');
+   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
-  useIonViewWillEnter(() => {
-    fetchCounts();
-  }, []);
+  useEffect(() => {
+  fetchCounts();
+}, [selectedYear]);
 
-  const fetchCounts = async () => {
-  const { data, error } = await supabase
+useEffect(() => {
+  const fetchYears = async () => {
+
+    const { data, error } = await supabase
+      .from('trainees')
+      .select('year_enrolled');
+
+    if (error) {
+      console.error("Error fetching years:", error);
+      return;
+    }
+
+    if (!data) return;
+
+    // ✅ kuha unique years
+    const years = Array.from(
+      new Set(data.map(d => d.year_enrolled))
+    )
+    .filter(y => y !== null)
+    .sort((a, b) => b - a); // latest first
+
+    setAvailableYears(years.map(String));
+  };
+
+  fetchYears();
+}, []);
+
+const fetchCounts = async () => {
+
+  let query = supabase
     .from('trainees')
-    .select('id, course');
+    .select('id, course, year_enrolled');
+
+  // ✅ FILTER BY YEAR ENROLLED
+  if (selectedYear) {
+    query = query.eq('year_enrolled', Number(selectedYear));
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error(error);
@@ -83,7 +122,6 @@ const Training: React.FC = () => {
 
   data?.forEach((trainee: any) => {
     const courseName = trainee.course;
-
     const courseObj = courses.find(c => c.name === courseName);
 
     if (courseObj) {
@@ -96,13 +134,13 @@ const Training: React.FC = () => {
 };
 
   const goToTrainees = (slug: string) => {
+  const yearParam = selectedYear ? `?year=${selectedYear}` : "";
 
-  if(slug === "all"){
-    history.push("/trainees/all")
-  }else{
-    history.push(`/batch/${slug}`)
+  if (slug === "all") {
+    history.push(`/trainees/all${yearParam}`);
+  } else {
+    history.push(`/batch/${slug}${yearParam}`);
   }
-
 };
 
   const handleSearch = () => {
@@ -129,27 +167,55 @@ const handleKeyDown = (e: any) => {
           </IonButtons>
           <IonTitle style={{ fontWeight: 600 }}>TSDC SKILSS TRAINING DASHBOARD</IonTitle>
 
-          <IonButtons slot="end">
-            <IonSearchbar
-              value={searchText}
-              debounce={300}
-              placeholder="Search Trainee..."
-              onIonChange={(e) => setSearchText(e.detail.value!)}
-              onKeyDown={(e: any) => {
-                  if (e.key === "Enter") {
-                    const value = e.target.value;
-                  if (!value.trim()) return;
+          <IonButtons slot="end" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 
-              history.push(`/trainees/all?query=${encodeURIComponent(value)}`);
-              setSearchText("");
-                }
-              }}
-              style={{
-                width: "260px",
-                "--border-radius": "10px"
-                }}
-            />
-          </IonButtons>
+  {/* ✅ YEAR FILTER (LEFT SIDE) */}
+  <IonSelect
+  value={selectedYear || ''} // ✅ ensures the selected year is reflected, default to All
+  placeholder="All"           // ✅ shows All if nothing is selected
+  onIonChange={(e) => setSelectedYear(e.detail.value)}
+  interface="popover"
+  style={{
+    width: "120px",
+    background: "white",
+    color: "#10377a", 
+    borderRadius: "8px",
+    padding: "0 5px"
+  }}
+>
+  <IonSelectOption value="">All</IonSelectOption> {/* ✅ always show All as default */}
+  {availableYears.map(year => (
+    <IonSelectOption key={year} value={year}>
+      {year}
+    </IonSelectOption>
+  ))}
+</IonSelect>
+
+  {/* SEARCH BAR */}
+  <IonSearchbar
+    value={searchText}
+    debounce={300}
+    placeholder="Search Trainee..."
+    onIonChange={(e) => setSearchText(e.detail.value!)}
+    onKeyDown={(e: any) => {
+      if (e.key === "Enter") {
+        const value = e.target.value;
+        if (!value.trim()) return;
+
+        // ✅ INCLUDE YEAR FILTER SA URL
+        const yearParam = selectedYear ? `&year=${selectedYear}` : "";
+
+        history.push(`/trainees/all?query=${encodeURIComponent(value)}${yearParam}`);
+        setSearchText("");
+      }
+    }}
+    style={{
+      width: "260px",
+      "--border-radius": "10px"
+    }}
+  />
+
+</IonButtons>
         
       </IonToolbar>
     </IonHeader><IonContent fullscreen className="ion-padding">

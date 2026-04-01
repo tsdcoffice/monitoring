@@ -351,7 +351,7 @@ const TraineeProfile: React.FC = () => {
           <IonRow>
             <IonCol>
               <IonSelect
-                placeholder="MONTH"
+                placeholder="BIRTHMONTH"
                 value={formData.birth_month}
                 onIonChange={e=>handleChange('birth_month', e.detail.value, false)}
               >
@@ -361,7 +361,7 @@ const TraineeProfile: React.FC = () => {
 
             <IonCol>
               <IonSelect
-                placeholder="DAY"
+                placeholder="BRITHDAY"
                 value={formData.birth_day}
                 onIonChange={e=>handleChange('birth_day', e.detail.value, false)}
               >
@@ -372,7 +372,7 @@ const TraineeProfile: React.FC = () => {
             <IonCol>
               <IonInput
                 type="number"
-                placeholder="YEAR"
+                placeholder="BIRTHYEAR"
                 value={formData.birth_year}
                 onIonChange={e=>handleChange('birth_year', e.detail.value, false)}
               />

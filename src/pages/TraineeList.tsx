@@ -143,6 +143,11 @@ const TraineeList: React.FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const urlSearch = queryParams.get('query') || '';
+  const urlYear = queryParams.get('year') || '';
+  useEffect(() => {
+  setSelectedYear(urlYear);
+}, [urlYear]);
+  const urlMode = queryParams.get('mode') || '';
 
   const [trainees, setTrainees] = useState<Trainee[]>([]);
   const [trainingTypes, setTrainingTypes] = useState<TrainingType[]>([]);
@@ -152,12 +157,12 @@ const TraineeList: React.FC = () => {
   const [durationHours, setDurationHours] = useState<number | "">("");
   const [trainor, setTrainor] = useState("");
   const [venue, setVenue] = useState("");
-  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedYear, setSelectedYear] = useState(urlYear);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [yearSummary, setYearSummary] = useState<any[]>([]);
   const [availableTrainingTypes, setAvailableTrainingTypes] = useState<TrainingType[]>([]);
   const [filteredTrainingTypes, setFilteredTrainingTypes] = useState<TrainingType[]>([]);
-  const [isReportMode, setIsReportMode] = useState(false);
+  const [isReportMode, setIsReportMode] = useState(urlMode === 'report');
 
       const overallTrainings = yearSummary.length;
 
@@ -179,6 +184,27 @@ const overallTrainees = yearSummary.reduce(
   useEffect(() => {
     setSearchText(urlSearch);
   }, [urlSearch]);
+
+  useEffect(() => {
+  const params = new URLSearchParams(location.search);
+
+  if (selectedYear) {
+    params.set('year', selectedYear);
+  } else {
+    params.delete('year');
+  }
+
+  // MODE
+  if (isReportMode) {
+    params.set('mode', 'report');
+  } else {
+    params.delete('mode');
+  }
+
+  history.replace({ search: params.toString() });
+
+}, [selectedYear]);
+
   const [debouncedSearch, setDebouncedSearch] = useState(urlSearch);
 
   /* =========================
@@ -320,6 +346,11 @@ useEffect(() => {
     }
 
     if (selectedBarangay) query = query.eq('barangay', selectedBarangay);
+
+    // ✅ YEAR FILTER
+if (selectedYear) {
+  query = query.eq('year_enrolled', Number(selectedYear));
+}
 
     const { data } = await query;
     setTrainees(data || []);
@@ -1427,7 +1458,7 @@ borderRadius:"6px"
 
 
 
-     {selectedYear ? (
+     {isReportMode && selectedYear ? (
         <div
           ref={tableRef}
           style={{
