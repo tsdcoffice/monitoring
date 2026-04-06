@@ -1120,119 +1120,113 @@ const downloadExcel = () => {
 </div>
 )}
 
-        <div style={{ overflowX: 'auto', width: '100%' }}>
-  <IonGrid style={{ minWidth: '1300px', width: 'max-content' }}>
-  {/* HEADER ROW - Total Size: 12.0 */}
-  <IonRow style={{fontWeight:'bold', borderBottom:'2px solid #000', background: '#10377a', color: '#ffffff',}}>
-    {showSelect && <IonCol size="0.8">Select</IonCol>}
-    <IonCol>No.</IonCol>
-<IonCol>Barangay</IonCol>
-<IonCol>Last Name</IonCol>
-<IonCol>First Name</IonCol>
-<IonCol>Middle Name</IonCol>
-<IonCol>Suffix</IonCol>
-<IonCol>Gender</IonCol>
-<IonCol>School</IonCol>
-<IonCol>Course</IonCol>
-<IonCol>Year</IonCol>
-<IonCol>IP</IonCol>
-<IonCol>Type</IonCol>
-<IonCol>Status</IonCol>
-<IonCol>Action</IonCol>
-  </IonRow>
-
-  {filteredStudents.map((student, index) => (
-    <IonRow key={student.id}
-      style={{ backgroundColor: getRowColor(student.status) }}
-    >
-      {showSelect && (
-        <IonCol size="0.8">
-          <input
-            type="checkbox"
-            checked={selectedStudents.includes(student.id)}
-            onChange={() => toggleSelectStudent(student.id)}
-          />
-        </IonCol>
-      )}
-      <IonCol>{index + 1}</IonCol>
-      <IonCol >{student.barangay}</IonCol>
-      <IonCol >{student.lastname}</IonCol>
-      <IonCol >{student.firstname}</IonCol>
-      <IonCol >{student.middlename || '-'}</IonCol>
-      <IonCol >{student.suffix}</IonCol>
-      <IonCol >{student.gender}</IonCol>
-      <IonCol size={showSelect ? "1.3" : "1.7"}>{student.school}</IonCol>
-      <IonCol >{student.course || '-'}</IonCol>
-      <IonCol >
-        {/* Imong original Year Level logic (Graduated/Select/Text) */}
-        {student.status === 'Graduated' ? (
-          <IonText color="success"><b>Graduated</b></IonText>
-        ) : showSelect ? (
-          <IonSelect
-            value={student.year_level}
-            placeholder="-"
-            onIonChange={e => updateYearLevel(student.id, e.detail.value)}
-          >
-            <IonSelectOption value="1st Year">1st Year</IonSelectOption>
-            <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
-            <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
-            <IonSelectOption value="4th Year">4th Year</IonSelectOption>
-            <IonSelectOption value="5th Year">5th Year</IonSelectOption>
-          </IonSelect>
-        ) : (
-          <IonText>{student.year_level || '-'}</IonText>
-        )}
-      </IonCol>
-      <IonCol size="0.8">
-        {/* Imong original IP logic */}
-        {student.is_ip ? (
-          <div>
-            <IonText>IP</IonText>
-            <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
-              {student.ip_group || 'No Tribe'}
-            </div>
-          </div>
-        ) : (
-          <IonText>Not IP</IonText>
-        )}
-      </IonCol>
-      <IonCol>{student.scholarship_types?.name || '-'}</IonCol>
-      <IonCol>
-        {/* Imong original Status logic */}
-        <IonText color={getStatusColor(student.status)}>
-          {student.status || 'On-going'}
-        </IonText>
-        {student.status === 'Stopped' && student.remarks && (
-          <div style={{ fontSize: '11px', color: '#eb445a', marginTop: '4px', fontStyle: 'italic' }}>
-            Reason: {student.remarks}
-          </div>
-        )}
-      </IonCol>
-
-      {/* UPDATE BUTTON - Gi-set og 1.2 para dili mapisat ang text */}
-      <IonCol size="0.9" >
-        <IonButton
-          size="small"
-          color="primary"
-          onClick={() => handleUpdate(student.id)}
-          style={{ fontSize: '10px', height: '25px', width: '100%' }}
-          >
-          Update
-        </IonButton>
-
-
-        <IonButton
-          size="small"
-          color="danger"
-          onClick={() => handleDelete(student.id)}
-            style={{ fontSize: '10px', height: '25px', width: '100%', marginTop: '4px' }}
-          >
-          Delete
-        </IonButton>
-      </IonCol>
+<div style={{ overflowX: 'auto', width: '100%' }}>
+  <IonGrid style={{ minWidth: '1300px', width: '100%' }}>
+    
+    {/* HEADER ROW - Kinahanglan naay matching sizes sa Data Row */}
+    <IonRow style={{ fontWeight: 'bold', borderBottom: '2px solid #000', background: '#10377a', color: '#ffffff' }}>
+      {showSelect && <IonCol size="0.4">Select</IonCol>}
+      <IonCol size="0.4">No.</IonCol>
+      <IonCol size="1">Barangay</IonCol>
+      <IonCol size="1">Last Name</IonCol>
+      <IonCol size="1">First Name</IonCol>
+      <IonCol size="0.9">Middle</IonCol>
+      <IonCol size="0.5">Suffix</IonCol>
+      <IonCol size="0.6">Gender</IonCol>
+      <IonCol size="1.4">School</IonCol>
+      <IonCol size="1.4">Course</IonCol>
+      <IonCol size="0.6">Year</IonCol>
+      <IonCol size="0.7">IP Status</IonCol>
+      <IonCol size="0.6">Type</IonCol>
+      <IonCol size="0.7">Status</IonCol>
+      <IonCol size="0.5" className="ion-text-center">Action</IonCol>
     </IonRow>
-  ))}
-</IonGrid>
+
+    {filteredStudents.map((student, index) => (
+      <IonRow key={student.id} style={{ backgroundColor: getRowColor(student.status), borderBottom: '1px solid #ddd', alignItems: 'center' }}>
+        
+        {showSelect && (
+          <IonCol size="0.4" style={{ textAlign: 'center' }}>
+            <input
+              type="checkbox"
+              checked={selectedStudents.includes(student.id)}
+              onChange={() => toggleSelectStudent(student.id)}
+            />
+          </IonCol>
+        )}
+
+        <IonCol size="0.4">{index + 1}</IonCol>
+        <IonCol size="1">{student.barangay}</IonCol>
+        <IonCol size="1">{student.lastname}</IonCol>
+        <IonCol size="1">{student.firstname}</IonCol>
+        <IonCol size="0.9">{student.middlename || '-'}</IonCol>
+        <IonCol size="0.5">{student.suffix || '-'}</IonCol>
+        <IonCol size="0.6">{student.gender}</IonCol>
+        
+        {/* Consistent Size para sa School */}
+        <IonCol size="1.4">{student.school}</IonCol>
+        
+        <IonCol size="1.4">{student.course || '-'}</IonCol>
+        
+        <IonCol size="0.6">
+          {student.status === 'Graduated' ? (
+            <IonText color="success"><b>Graduated</b></IonText>
+          ) : showSelect ? (
+            <IonSelect
+              interface="popover"
+              value={student.year_level}
+              onIonChange={e => updateYearLevel(student.id, e.detail.value)}
+              
+            >
+              <IonSelectOption value="1st Year">1st Yr</IonSelectOption>
+              <IonSelectOption value="2nd Year">2nd Yr</IonSelectOption>
+              <IonSelectOption value="3rd Year">3rd Yr</IonSelectOption>
+              <IonSelectOption value="4th Year">4th Yr</IonSelectOption>
+              <IonSelectOption value="5th Year">5th Yr</IonSelectOption>
+              
+            </IonSelect>
+          ) : (
+            <IonText >{student.year_level || '-'}</IonText>
+          )}
+        </IonCol>
+
+        <IonCol size="0.7">
+          <IonText>{student.is_ip ? 'IP' : 'Not IP'}</IonText>
+          {student.is_ip && <div style={{ fontSize: '9px', color: '#666' }}>{student.ip_group}</div>}
+        </IonCol>
+
+        <IonCol size="0.6">{student.scholarship_types?.name || '-'}</IonCol>
+        
+        <IonCol size="0.7">
+          <IonText color={getStatusColor(student.status)} style={{ fontWeight: 'bold' }}>
+            {student.status || 'On-going'}
+          </IonText>
+        </IonCol>
+
+        <IonCol size="0.5"> {/* Gi-adjust ang size gikan 0.8 ngadto sa 1.2 para naay space ang duha ka button */}
+          <div style={{ display: 'flex', flexDirection: 'row', gap: '4px', justifyContent: 'center' }}>
+            <IonButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleUpdate(student.id)} 
+              style={{ fontSize: '10px', height: '28px', margin: 0, flex: '1' }}
+              >
+             Update
+            </IonButton>
+    
+            <IonButton 
+              size="small" 
+              color="danger" 
+              onClick={() => handleDelete(student.id)} 
+              style={{ fontSize: '10px', height: '28px', margin: 0, flex: '1' }}
+              >
+              Delete
+            </IonButton>
+          </div>
+        </IonCol>
+      </IonRow>
+    ))}
+  </IonGrid>
 </div>
 
       </IonContent>
