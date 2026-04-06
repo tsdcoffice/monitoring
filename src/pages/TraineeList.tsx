@@ -164,7 +164,7 @@ const overallTrainees = yearSummary.reduce(
   useEffect(() => {
     const fetchTypes = async () => {
       const { data } = await supabase
-        .from('training_types')
+        .from('course')
         .select('*')
         .order('name');
       setTrainingTypes(data || []);
@@ -287,7 +287,7 @@ useEffect(() => {
         const trainingName = courseSlugMap[slug];
 
         const { data: typeData } = await supabase
-          .from('training_types')
+          .from('course')
           .select('id')
           .eq('name', trainingName)
           .single();
@@ -376,7 +376,7 @@ if (selectedYear) {
     const trainingName = courseSlugMap[slug];
 
     const { data: typeData } = await supabase
-      .from('training_types')
+      .from('course')
       .select('id')
       .eq('name', trainingName)
       .single();
@@ -1010,7 +1010,7 @@ const saveBatchDetails = async () => {
   const trainingName = courseSlugMap[slug];
 
   const { data: typeData } = await supabase
-    .from("training_types")
+    .from("course")
     .select("id")
     .eq("name", trainingName)
     .single();
@@ -1079,6 +1079,7 @@ const saveBatchDetails = async () => {
   const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
   const ipDisplay = t.is_ip ? `IP (${t.ip_group || 'N/A'})` : 'Not IP';
 
+  
   return new TableRow({
     children: [
       new TableCell({children:[new Paragraph(String(index + 1))]}),
@@ -1212,6 +1213,27 @@ new Paragraph(" "),
 
   setShowDownload(false);
 };
+
+const handleUpdate = (trainee: Trainee) => {
+  history.push(`/update-trainee/${trainee.id}`);
+};
+
+const handleDelete = async (id: string) => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this trainee?");
+  if (!confirmDelete) return;
+
+  const { error } = await supabase
+    .from('trainees')
+    .delete()
+    .eq('id', id);
+
+  if (!error) {
+    setTrainees(prev => prev.filter(t => t.id !== id));
+  } else {
+    alert("Failed to delete.");
+  }
+};
+
 
   return (
     <IonPage>
@@ -1541,6 +1563,7 @@ textAlign:'center'
 <IonCol>IP</IonCol>
 <IonCol>Date</IonCol>
 <IonCol>Training Type</IonCol>
+<IonCol>Action</IonCol>
 </IonRow>
 
 {trainees.map((t, index) => (
@@ -1561,6 +1584,23 @@ textAlign:'center'
 <IonCol>
 {trainingTypes.find(tt => tt.id === t.training_type_id)?.name || ''}
 {!batch && !selectedBatchFilter && t.batch ? ` (Batch ${t.batch})` : ''}
+</IonCol>
+<IonCol>
+  <IonButton
+    size="small"
+    color="primary"
+    onClick={() => handleUpdate(t)}
+  >
+    Update
+  </IonButton>
+
+  <IonButton
+    size="small"
+    color="danger"
+    onClick={() => handleDelete(t.id)}
+  >
+    Delete
+  </IonButton>
 </IonCol>
 </IonRow>
 ))}

@@ -73,7 +73,7 @@ const Training: React.FC = () => {
       .from('trainees')
       .select(`
         id,
-        training_types (
+        course (
           name
         )
       `);
@@ -87,7 +87,7 @@ const Training: React.FC = () => {
     courses.forEach(course => (counts[course.slug] = 0));
 
     data?.forEach((trainee: any) => {
-      const trainingName = trainee.training_types?.name;
+      const trainingName = trainee.course?.name;
       const courseObj = courses.find(c => c.name === trainingName);
       if (courseObj) counts[courseObj.slug]++;
     });

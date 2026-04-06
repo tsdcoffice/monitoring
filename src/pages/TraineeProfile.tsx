@@ -126,7 +126,7 @@ const TraineeProfile: React.FC = () => {
 
     try {
       const { data: trainingData, error: trainingError } = await supabase
-        .from('training_types')
+        .from('course')
         .select('id')
         .eq('name', formData.course)
         .single();

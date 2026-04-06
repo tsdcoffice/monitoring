@@ -12,7 +12,8 @@ import {
   IonButton,
   IonToast,
   IonButtons,
-  IonIcon
+  IonIcon,
+  IonCol
 } from '@ionic/react';
 
 import { arrowBack } from 'ionicons/icons';
@@ -31,6 +32,7 @@ const StudentProfile: React.FC = () => {
 
   const firstNameRef = useRef<HTMLIonInputElement>(null);
   const middleNameRef = useRef<HTMLIonInputElement>(null);
+  const suffixRef = useRef<HTMLIonInputElement>(null);
   const schoolRef = useRef<HTMLIonInputElement>(null);
   const courseRef = useRef<HTMLIonInputElement>(null);
 
@@ -51,6 +53,7 @@ const StudentProfile: React.FC = () => {
     lastname: '',
     firstname: '',
     middlename: '',
+    suffix: '',
     gender: '',
     barangay: '',
     school: '',
@@ -82,7 +85,7 @@ const StudentProfile: React.FC = () => {
   };
 
   const handleChange = (field: string, value: any) => {
-    const uppercaseFields = ['lastname','firstname','middlename','school','course','ip_group'];
+    const uppercaseFields = ['lastname','firstname','middlename','suffix', 'school','course','ip_group'];
 
     if (uppercaseFields.includes(field) && value) {
       value = value.toUpperCase();
@@ -190,9 +193,23 @@ const StudentProfile: React.FC = () => {
             placeholder="MIDDLENAME"
             value={formData.middlename}
             onIonChange={e => handleChange('middlename', e.detail.value)}
-            onKeyDown={handleEnter(schoolRef)}
+            onKeyDown={handleEnter(suffixRef)}
           />
         </IonItem>
+
+  
+      <IonCol size="4">
+        <IonItem>
+          <IonLabel position="stacked">Suffix</IonLabel>
+            <IonInput
+              ref={suffixRef}
+              placeholder="e.g. Jr., Sr., III"
+              value={formData.suffix}
+              onIonChange={e => handleChange('suffix', e.detail.value)}
+              onKeyDown={handleEnter(schoolRef)} // <--- Mo-focus sa School
+            />
+        </IonItem>
+      </IonCol>
 
         <IonItem>
           <IonLabel position="stacked">Gender *</IonLabel>

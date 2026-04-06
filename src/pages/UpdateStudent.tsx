@@ -41,6 +41,7 @@ const UpdateStudent: React.FC = () => {
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [middlename, setMiddlename] = useState('');
+  const [suffix, setSuffix] = useState('');
   const [gender, setGender] = useState('');
   const [barangay, setBarangay] = useState('');
   const [school, setSchool] = useState('');
@@ -92,6 +93,7 @@ const UpdateStudent: React.FC = () => {
       setFirstname(data.firstname);
       setLastname(data.lastname);
       setMiddlename(data.middlename || '');
+      setSuffix(data.suffix || '');
       setGender(data.gender);
       setBarangay(data.barangay);
       setSchool(data.school);
@@ -113,6 +115,7 @@ const UpdateStudent: React.FC = () => {
         firstname,
         lastname,
         middlename,
+        suffix,
         gender,
         barangay,
         school,
@@ -147,25 +150,42 @@ const UpdateStudent: React.FC = () => {
         </IonItem>
 
         <IonItem>
-          <IonLabel position="stacked">Last Name</IonLabel>
-          <IonInput ref={lastRef} value={lastname} style={inputStyle} onIonInput={e => setLastname(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, middleRef)}/>
-        </IonItem>
-
-        <IonItem>
           <IonLabel position="stacked">Middle Name</IonLabel>
           <IonInput ref={middleRef} value={middlename} style={inputStyle} onIonInput={e => setMiddlename(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, schoolRef)}/>
         </IonItem>
 
         <IonItem>
-          <IonLabel>Gender</IonLabel>
-          <IonSelect interface="popover" value={gender} onIonChange={e => setGender(e.detail.value)}>
-            <IonSelectOption value="Male">Male</IonSelectOption>
-            <IonSelectOption value="Female">Female</IonSelectOption>
-          </IonSelect>
+          <IonLabel position="stacked">Last Name</IonLabel>
+          <IonInput ref={lastRef} value={lastname} style={inputStyle} onIonInput={e => setLastname(e.detail.value!)} onKeyDown={(e) => handleKeyDown(e, middleRef)}/>
         </IonItem>
 
         <IonItem>
-          <IonLabel>Barangay</IonLabel>
+          <IonLabel position="stacked">Suffix</IonLabel>
+            <IonInput
+              value={suffix}
+              style={inputStyle}
+              placeholder="e.g. Jr., Sr., III"
+              onIonInput={e => setSuffix(e.detail.value!.toUpperCase())}
+              onKeyDown={(e) => handleKeyDown(e, schoolRef)}
+            />
+        </IonItem>
+
+        <IonItem>
+          <IonLabel position="stacked">Gender *</IonLabel>
+
+            <IonSelect
+             interface="popover"
+             value={gender}
+             placeholder="Select Gender"
+             onIonChange={e => setGender(e.detail.value)}
+            >
+              <IonSelectOption value="Male">Male</IonSelectOption>
+              <IonSelectOption value="Female">Female</IonSelectOption>
+            </IonSelect>
+        </IonItem>
+
+        <IonItem>
+          <IonLabel position="stacked">Barangay</IonLabel>
           <IonSelect interface="popover" value={barangay} onIonChange={e => setBarangay(e.detail.value)}>
             {barangays.map(b => (
               <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
@@ -184,7 +204,7 @@ const UpdateStudent: React.FC = () => {
         </IonItem>
 
         <IonItem>
-          <IonLabel>Year Level</IonLabel>
+          <IonLabel position="stacked">Year Level</IonLabel>
           <IonSelect interface="popover" value={yearLevel} onIonChange={e => setYearLevel(e.detail.value)}>
             <IonSelectOption value="1st Year">1st Year</IonSelectOption>
             <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
@@ -195,46 +215,46 @@ const UpdateStudent: React.FC = () => {
         </IonItem>
 
         <IonItem>
-  <IonLabel>IP Status</IonLabel>
-  <IonSelect 
-    interface="popover" 
-    value={isIP ? 'IP' : 'NOT_IP'} 
-    onIonChange={e => {
-      const val = e.detail.value === 'IP';
-      setIsIP(val);
-      if (val) {
-        // Mo-pop up diretso ang listahan sa tribes human sa gamay nga delay
-        setTimeout(() => tribeSelectRef.current?.open(), 150);
-      } else {
-        setIpTribe(''); // I-reset kung dili IP
-      }
-    }}
-  >
-    <IonSelectOption value="IP">IP</IonSelectOption>
-    <IonSelectOption value="NOT_IP">Not IP</IonSelectOption>
-  </IonSelect>
-</IonItem>
+          <IonLabel position="stacked">IP Status</IonLabel>
+            <IonSelect 
+              interface="popover" 
+              value={isIP ? 'IP' : 'NOT_IP'} 
+              onIonChange={e => {
+                const val = e.detail.value === 'IP';
+                setIsIP(val);
+                if (val) {
+                 // Mo-pop up diretso ang listahan sa tribes human sa gamay nga delay
+                  setTimeout(() => tribeSelectRef.current?.open(), 150);
+                } else {
+                setIpTribe(''); // I-reset kung dili IP
+                }
+              }}
+            >
+              <IonSelectOption value="IP">IP</IonSelectOption>
+              <IonSelectOption value="NOT_IP">Not IP</IonSelectOption>
+          </IonSelect>
+        </IonItem>
 
-{/* KINI ANG MOGAWAS KON IP ANG NAPILI */}
-{isIP && (
-  <IonItem lines="full">
-    <IonLabel position="stacked">Select IP Tribe</IonLabel>
-    <IonSelect 
-      ref={tribeSelectRef}
-      interface="popover" // Walay OK ug Cancel buttons
-      value={ipTribe} 
+          {/* KINI ANG MOGAWAS KON IP ANG NAPILI */}
+          {isIP && (
+        <IonItem lines="full">
+          <IonLabel position="stacked">Select IP Tribe</IonLabel>
+          <IonSelect 
+            ref={tribeSelectRef}
+            interface="popover" // Walay OK ug Cancel buttons
+            value={ipTribe} 
       
-      onIonChange={e => setIpTribe(e.detail.value)}
-    >
-      {tribes.map(t => (
-        <IonSelectOption key={t} value={t}>{t}</IonSelectOption>
-      ))}
-    </IonSelect>
-  </IonItem>
-)}
+            onIonChange={e => setIpTribe(e.detail.value)}
+          >
+            {tribes.map(t => (
+            <IonSelectOption key={t} value={t}>{t}</IonSelectOption>
+            ))}
+          </IonSelect>
+        </IonItem>
+          )}
 
         <IonItem>
-          <IonLabel>Status</IonLabel>
+          <IonLabel position="stacked">Status</IonLabel>
           <IonSelect interface="popover" value={status} onIonChange={e => setStatus(e.detail.value)}>
             <IonSelectOption value="On-going">On-going</IonSelectOption>
             <IonSelectOption value="Graduated">Graduated</IonSelectOption>
