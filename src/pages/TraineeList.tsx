@@ -445,79 +445,66 @@ if (selectedYear) {
 
 }, [selectedYear, trainingTypes]);
 
-    const generateTableRows = () => {
-
-  /* YEAR SUMMARY TABLE */
-  if (selectedYear) {
-
-    const header = `
+ const TraineeTable: React.FC = () => {
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
-      <tr>
-        <th>No.</th>
-        <th>Training Type</th>
-        <th>Total Batches</th>
-        <th>Total Trainees</th>
-      </tr>
+        <tr>
+          <th>No.</th>
+          <th>Barangay</th>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Education</th>
+          <th>Date</th>
+          <th>Training Type</th>
+          <th>Action</th>
+        </tr>
       </thead>
       <tbody>
-    `;
+        {trainees.map((t, index) => {
+          const typeName =
+            trainingTypes.find(tt => tt.id === t.course)?.name || "";
+          const trainingDisplay =
+            (!batch && !selectedBatchFilter)
+              ? `${typeName} (Batch ${t.batch})`
+              : typeName;
 
-    const rows = yearSummary.map((t, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${t.training}</td>
-        <td>${t.batches}</td>
-        <td>${t.trainees}</td>
-      </tr>
-    `).join('');
+          function deleteTrainee(id: string): void {
+            throw new Error('Function not implemented.');
+          }
 
-    return header + rows + "</tbody>";
-  }
-
-  /* NORMAL TRAINEE TABLE */
-
-  const header = `
-      <thead>
-      <tr>
-        <th>No.</th>
-        <th>Barangay</th>
-        <th>Name</th>
-        <th>Gender</th>
-        <th>Education</th>
-        <th>IP</th>
-        <th>Date</th>
-        <th>Training Type</th>
-      </tr>
-      </thead>
-      <tbody>
-  `;
-
-  const rows = trainees.map((t, index) => {
-
-    const typeName =
-      trainingTypes.find(tt => tt.id === t.course)?.name || "";
-
-    const trainingDisplay =
-      (!batch && !selectedBatchFilter)
-        ? `${typeName} (Batch ${t.batch})`
-        : typeName;
-
- 
-
-    return `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${t.barangay}</td>
-        <td>${t.lastname}, ${t.firstname} ${t.middlename || ''}</td>
-        <td>${t.gender}</td>
-        <td>${t.educational_attainment}</td>
-        <td>${new Date(t.created_at).toLocaleDateString()}</td>
-        <td>${trainingDisplay}</td>
-      </tr>
-    `;
-  }).join('');
-
-  return header + rows + "</tbody>";
+          return (
+            <tr key={t.id}>
+              <td>{index + 1}</td>
+              <td>{t.barangay}</td>
+              <td>{`${t.lastname}, ${t.firstname} ${t.middlename || ''}`}</td>
+              <td>{t.gender}</td>
+              <td>{t.educational_attainment}</td>
+              <td>{new Date(t.created_at).toLocaleDateString()}</td>
+              <td>{trainingDisplay}</td>
+              <td>
+                <IonButton
+                  size="small"
+                  color="primary"
+                  onClick={() => history.push(`/update-trainee/${t.id}`)}
+                  style={{ marginRight: '5px' }}
+                >
+                  Update
+                </IonButton>
+                <IonButton
+                  size="small"
+                  color="danger"
+                  onClick={() => deleteTrainee(t.id)}
+                >
+                  Delete
+                </IonButton>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 };
 
   /* PRINT */
@@ -1591,3 +1578,7 @@ borderRadius:"6px"
 };
 
 export default TraineeList;
+function generateTableRows() {
+  throw new Error('Function not implemented.');
+}
+
