@@ -1133,12 +1133,12 @@ const downloadExcel = () => {
       <IonCol size="0.9">Middle</IonCol>
       <IonCol size="0.5">Suffix</IonCol>
       <IonCol size="0.6">Gender</IonCol>
-      <IonCol size="1.4">School</IonCol>
-      <IonCol size="1.4">Course</IonCol>
+      <IonCol size="1.3">School</IonCol>
+      <IonCol size="1.3">Course</IonCol>
       <IonCol size="0.6">Year</IonCol>
       <IonCol size="0.7">IP Status</IonCol>
       <IonCol size="0.6">Type</IonCol>
-      <IonCol size="0.7">Status</IonCol>
+      <IonCol size="0.9">Status</IonCol>
       <IonCol size="0.5" className="ion-text-center">Action</IonCol>
     </IonRow>
 
@@ -1164,9 +1164,9 @@ const downloadExcel = () => {
         <IonCol size="0.6">{student.gender}</IonCol>
         
         {/* Consistent Size para sa School */}
-        <IonCol size="1.4">{student.school}</IonCol>
+        <IonCol size="1.3">{student.school}</IonCol>
         
-        <IonCol size="1.4">{student.course || '-'}</IonCol>
+        <IonCol size="1.3">{student.course || '-'}</IonCol>
         
         <IonCol size="0.6">
           {student.status === 'Graduated' ? (
@@ -1197,7 +1197,7 @@ const downloadExcel = () => {
 
         <IonCol size="0.6">{student.scholarship_types?.name || '-'}</IonCol>
         
-        <IonCol size="0.7">
+        <IonCol size="1">
           <IonText color={getStatusColor(student.status)} style={{ fontWeight: 'bold' }}>
             {student.status || 'On-going'}
           </IonText>
