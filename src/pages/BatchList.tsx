@@ -5,13 +5,14 @@ import {
 } from "@ionic/react";
 
 import { arrowBackOutline } from "ionicons/icons";
-import { useParams, useHistory } from "react-router-dom";
+import { useParams, useHistory, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useIonViewWillEnter } from "@ionic/react";
 
 interface BatchCount {
   batch:number
+  year: number
   count:number
 }
 
@@ -47,6 +48,10 @@ const BatchList:React.FC = () => {
   const {slug} = useParams<{slug:string}>()
   const history = useHistory()
 
+  const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const selectedYear = queryParams.get("year");
+
   const [batches,setBatches] = useState<BatchCount[]>([])
 
   useEffect(() => {
@@ -74,7 +79,7 @@ const BatchList:React.FC = () => {
     supabase.removeChannel(channel)
   }
 
-}, [slug])
+}, [slug, selectedYear])
 
 
 const fetchBatches = async () => {
@@ -86,11 +91,16 @@ const fetchBatches = async () => {
     return;
   }
 
-  // 🔥 GET trainees directly (NO training_types anymore)
-  const { data, error } = await supabase
+  let query = supabase
     .from("trainees")
-    .select("batch")
+    .select("batch, year_enrolled")
     .eq("course", trainingName);
+
+  if (selectedYear) {
+    query = query.eq("year_enrolled", Number(selectedYear));
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error(error);
@@ -102,36 +112,37 @@ const fetchBatches = async () => {
     return;
   }
 
-  // 🔥 COUNT per batch
-  const batchMap: { [key: number]: number } = {};
+  const batchMap: { [key: string]: BatchCount } = {};
 
   data.forEach((t: any) => {
-    if (!t.batch) return;
+    if (!t.batch || !t.year_enrolled) return;
 
-    const batchNum = Number(t.batch);
+    const key = `${t.batch}-${t.year_enrolled}`;
 
-    if (!batchMap[batchNum]) {
-      batchMap[batchNum] = 0;
+    if (!batchMap[key]) {
+      batchMap[key] = {
+        batch: Number(t.batch),
+        year: Number(t.year_enrolled),
+        count: 0
+      };
     }
 
-    batchMap[batchNum]++;
+    batchMap[key].count++;
   });
 
-  // convert to array
-  const batchArray = Object.keys(batchMap).map((b) => ({
-    batch: Number(b),
-    count: batchMap[Number(b)]
-  }));
+  let batchArray = Object.values(batchMap);
 
-  // sort ascending
-  batchArray.sort((a, b) => a.batch - b.batch);
+  batchArray.sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return a.batch - b.batch;
+  });
 
   setBatches(batchArray);
 };
 
-  const openBatch = (batch:number)=>{
-    history.push(`/trainees/${slug}/${batch}`)
-  }
+  const openBatch = (batch:number, year:number)=>{
+  history.push(`/trainees/${slug}/${batch}?year=${year}`)
+}
 
   return(
 
@@ -159,42 +170,92 @@ const fetchBatches = async () => {
 <IonGrid>
 <IonRow>
 
-{batches.map(b=>(
-<IonCol size="12" sizeMd="4" key={b.batch}>
+{!selectedYear ? (
 
-<IonCard
-  button
-  onClick={()=>openBatch(b.batch)}
-  style={{
-    backgroundColor: '#10377a',      // Solid Blue Background
-    color: '#ffffff',               // White Text
-    borderRadius: '12px',           // Rounded Corners
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', // Shadow effect
-    borderLeft: '5px solid #d68718', // Ang Orange accent sa kilid
-    margin: '10px',
-    textAlign: 'center'
-  }}
->
+  Object.entries(
+    batches.reduce((acc: any, b) => {
+      if (!acc[b.year]) acc[b.year] = [];
+      acc[b.year].push(b);
+      return acc;
+    }, {})
+  ).map(([year, batchList]: any) => (
 
-<IonCardHeader>
-  <IonCardTitle style={{ color: '#ffffff' }}> {/* Siguroha nga puti ang Title */}
-    Batch {b.batch}
-  </IonCardTitle>
-</IonCardHeader>
+    <div key={year} style={{ width: "100%" }}>
 
-<IonCardContent>
-  <h1 style={{margin:0, fontSize:"2.5rem", fontWeight: 'bold'}}>
-    {b.count}
-  </h1>
-  <p style={{margin:0, opacity: 0.9}}>
-    Trainees
-  </p>
-</IonCardContent>
+      <h2 style={{ marginLeft: "10px", color: "#10377a" }}>
+        Year: {year}
+      </h2>
 
-</IonCard>
+      <IonRow>
+        {batchList.map((b: BatchCount) => (
+          <IonCol size="12" sizeMd="4" key={`${b.batch}-${b.year}`}>
+            <IonCard
+              button
+              onClick={() => openBatch(b.batch, b.year)}
+              style={{
+                backgroundColor: '#10377a',
+                color: '#ffffff',
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                borderLeft: '5px solid #d68718',
+                margin: '10px',
+                textAlign: 'center'
+              }}
+            >
+              <IonCardHeader>
+                <IonCardTitle style={{ color: '#ffffff' }}>
+                  Batch {b.batch}
+                </IonCardTitle>
+              </IonCardHeader>
 
-</IonCol>
-))}
+              <IonCardContent>
+                <h1 style={{margin:0, fontSize:"2.5rem", fontWeight:'bold'}}>
+                  {b.count}
+                </h1>
+                <p style={{margin:0}}>Trainees</p>
+              </IonCardContent>
+            </IonCard>
+          </IonCol>
+        ))}
+      </IonRow>
+
+    </div>
+  ))
+
+) : (
+
+  batches.map(b => (
+    <IonCol size="12" sizeMd="4" key={`${b.batch}-${b.year}`}>
+      <IonCard
+        button
+        onClick={() => openBatch(b.batch, b.year)}
+        style={{
+          backgroundColor: '#10377a',
+          color: '#ffffff',
+          borderRadius: '12px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          borderLeft: '5px solid #d68718',
+          margin: '10px',
+          textAlign: 'center'
+        }}
+      >
+        <IonCardHeader>
+          <IonCardTitle style={{ color: '#ffffff' }}>
+            Batch {b.batch}
+          </IonCardTitle>
+        </IonCardHeader>
+
+        <IonCardContent>
+          <h1 style={{margin:0, fontSize:"2.5rem", fontWeight:'bold'}}>
+            {b.count}
+          </h1>
+          <p style={{margin:0}}>Trainees</p>
+        </IonCardContent>
+      </IonCard>
+    </IonCol>
+  ))
+
+)}
 
 
 </IonRow>
