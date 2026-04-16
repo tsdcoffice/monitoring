@@ -1170,15 +1170,18 @@ new Paragraph(" "),
               <IonButton
   fill="clear"
   onClick={() => {
-    resetFilters();
-    if (slug && batch) {
-      // If we are looking at a specific batch, go back to that Batch List
-      history.push(`/batch/${slug}`);
-    } else {
-      // Otherwise (All Trainees), go back to the main Training dashboard
-      history.push('/training');
-    }
-  }}
+  const params = new URLSearchParams();
+
+  if (selectedYear) {
+    params.set('year', selectedYear);
+  }
+
+  if (slug && batch) {
+    history.push(`/batch/${slug}?${params.toString()}`);
+  } else {
+    history.push(`/training?${params.toString()}`);
+  }
+}}
 >
   <IonIcon icon={arrowBackOutline} />
 </IonButton>
