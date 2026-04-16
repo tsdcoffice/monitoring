@@ -40,13 +40,15 @@ import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { ImageRun } from "docx";
 import { ShadingType } from "docx";
+import { WidthType } from "docx";
 
 
 interface Student {
   id: string;
-  firstname: string;
   lastname: string;
+  firstname: string;
   middlename: string | null;
+  suffix: string;
   gender: string;
   barangay: string;
   school: string;
@@ -320,13 +322,15 @@ if (data) {
 
         .col-no { width: 3%; }
         .col-brgy { width: 8%; }
-        .col-name { width: 11%; }
-        .col-school { width: 12%; }
-        .col-course { width: 15%; }
+        .col-lastname {width: 7%}
+        .col-name { width: 6%; }
+        .col-school { width: 11%; }
+        .col-gender { width: 7%; }
+        .col-course { width: 12%; }
         .col-ip { width: 6%;}
         .col-type { width: 5%;}
-        .col-remarks { width: 8%;}
-        .col-year { width: 6%;}
+        .col-remarks { width: 5%;}
+        .col-year { width: 4%;}
         
         
 
@@ -347,7 +351,10 @@ if (data) {
           <tr>
             <th class="col-no">No.</th>
             <th class="col-brgy">Barangay</th>
-            <th class="col-name">Name</th>
+            <th class="col-lastname">Last Name</th>
+            <th class="col-name">First Name</th>
+            <th class="col-name">Middle</th>
+            <th class="col-no">Suffix</th>
             <th>Gender</th>
             <th class="col-school">School</th>
             <th class="col-course">Course</th>
@@ -368,10 +375,13 @@ if (data) {
               <tr>
                 <td>${i + 1}</td>
                 <td>${s.barangay}</td>
-                <td class="text-left">${s.lastname}, ${s.firstname} ${s.middlename}</td>
+                <td>${s.lastname}</td>
+                <td>${s.firstname}</td>
+                <td>${s.middlename || '-'}</td>
+                <td>${s.suffix || '-'}</td>
                 <td>${s.gender}</td>
-                <td class="text-left">${s.school}</td>
-                <td class="text-left">${s.course || '-'}</td>
+                <td>${s.school}</td>
+                <td>${s.course || '-'}</td>
                 <td>${s.year_level || '-'}</td>
                 <td>
                   ${s.is_ip 
@@ -399,35 +409,42 @@ if (data) {
 
   /* PDF */
 const handleDownloadPDF = () => {
-  const pdf = new jsPDF('p', 'mm', 'a4');
+  setShowDownload(false);
+  const pdf = new jsPDF('l', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
 
   const img = new Image();
   img.src = headerImg;
 
   // 1. Header Image
-  pdf.addImage(img, "PNG", 10, 5, 190, 30);
+  const imgWidth = 190;
+  const imgHeight = 30;
+  const x = (pageWidth - imgWidth) / 2;
+    pdf.addImage(img, "PNG", x, 5, imgWidth, imgHeight);
 
   // 2. Report Title
   pdf.setFontSize(16);
   const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
-  pdf.text(reportTitle, 105, 40, { align: 'center' });
+  pdf.text(reportTitle, pageWidth / 2, 40, { align: 'center' });
 
   // 3. Date Generated
   pdf.setFontSize(10);
-  pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
-
+  pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 46, { align: 'center' });
   let startY = 55;
 
   // 4. Columns (Gidugang ang Remarks sa tumoy)
   const tableColumn = [
-    "No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
+    "No.", "Barangay", "Last Name","First Name", "Middle Name", "Suffix", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
   ];
 
   // 5. Rows (Gidugang ang s.remarks)
   const tableRows = filteredStudents.map((s, index) => [
     index + 1,
     s.barangay,
-    `${s.lastname}, ${s.firstname} ${s.middlename || ''}`,
+    s.lastname,
+    s.firstname,
+    s.middlename || '-',
+    s.suffix,
     s.gender,
     s.school,
     s.course || '-',
@@ -459,19 +476,21 @@ const handleDownloadPDF = () => {
     // I-manage ang gilapdon sa matag column
     columnStyles: {
       0: { cellWidth: 7 },  // No.
-      2: { halign: 'left', cellWidth: 22 }, // Name
-      4: { halign: 'left', cellWidth: 22 }, // School
-      5: { halign: 'left', cellWidth: 20 }, // Course
-      10: { halign: 'left', cellWidth: 18 } // Remarks
+      3: { cellWidth: 22 },  // First Name
+      7: { cellWidth: 35 },  // school
+      8: { cellWidth: 35 },  // course
+      11: { halign: 'center', cellWidth: 18 }, // IP
+      13: { cellWidth: 15 }, // Remarks
+      
     },
     didParseCell: function (data) {
       if (data.section === 'body') {
-        const status = data.row.cells[9].raw; // Index 9 gihapon ang Status
+        const status = data.row.cells[12].raw; // Index 9 gihapon ang Status
 
         
 
         // Text color styling para sa Status column
-        if (data.column.index === 9) {
+        if (data.column.index === 12) {
           if (status === 'Graduated') data.cell.styles.textColor = [0, 128, 0];
           if (status === 'Stopped') data.cell.styles.textColor = [200, 0, 0];
           data.cell.styles.fontStyle = 'bold';
@@ -506,6 +525,25 @@ const handleDownloadPDF = () => {
 
     const handleUpdate = (studentId: string) => {
   history.push(`/update-student/${studentId}`);
+};
+
+const handleDelete = async (id: string) => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this student?");
+  if (!confirmDelete) return;
+
+  const { error } = await supabase
+    .from('students')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Delete error:", error.message);
+    alert("Failed to delete!");
+    return;
+  }
+    alert("Deleted Succesfully!");
+
+    await fetchStudents();
 };
 
 const toggleSelectStudent = (id: string) => {
@@ -557,7 +595,10 @@ const downloadExcel = () => {
   const data = filteredStudents.map((s, i) => ({
     "No.": i + 1,
     Barangay: s.barangay,
-    Name: `${s.lastname}, ${s.firstname} ${s.middlename || ""}`,
+    "Last Name": s.lastname,
+    "First Name": s.firstname,
+    "Middle Name": s.middlename || "-",
+    "Suffix": s.suffix || "-",
     Gender: s.gender,
     School: s.school,
     Course: s.course || "-",
@@ -586,9 +627,9 @@ const downloadExcel = () => {
   // 3. KINI ANG IMPORTANTE: Merging para ma-center ang Title (Column A to K)
   // Index c:0 (Column A) hangtod c:10 (Column K)
   worksheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }, // Merge Title (Row 1)
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }  // Merge Generated Date (Row 2)
-  ];
+  { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }, // Title (A → N)
+  { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }  // Date (A → N)
+];
 
   // 4. Center Styling para sa Title ug Date
   // Note: Kinahanglan ang xlsx-js-style library para mugana ang .s
@@ -606,17 +647,44 @@ const downloadExcel = () => {
   }
 
   // 5. Header Row (Row 4)
-  const headerRow = ["No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"];
+  const headerRow = ["No.", "Barangay", "Last Name","First Name", "Middle Name", "Suffix", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"];
   XLSX.utils.sheet_add_aoa(worksheet, [headerRow], { origin: "A4" });
 
   // 6. Data Rows (Row 5 onwards)
   XLSX.utils.sheet_add_json(worksheet, data, { origin: "A5", skipHeader: true });
+      // ✅ STATUS TEXT COLOR (INSERT THIS PART)
+      const startRow = 4; // Row 5 in Excel (0-based)
+
+      data.forEach((row, i) => {
+        const excelRow = startRow + i;
+        const statusCell = XLSX.utils.encode_cell({ r: excelRow, c: 12 });
+
+         if (worksheet[statusCell]) {
+          let fontColor = "000000";
+
+        if (row.Status === "Graduated") {
+          fontColor = "00B050"; // Green
+        } else if (row.Status === "Stopped") {
+          fontColor = "C00000"; // Red
+        } else if (row.Status === "On-going") {
+          fontColor = "7F7F7F"; // Grayish
+        }
+
+    worksheet[statusCell].s = {
+      alignment: { horizontal: "left", vertical: "center" },
+      font: {
+        bold: true,
+        color: { rgb: fontColor }
+      }
+    };
+  }
+});
 
   // 7. Styling Table Header (Blue Style)
   const headerStyle = {
     fill: { fgColor: { rgb: "10377A" } },
     font: { bold: true, color: { rgb: "FFFFFF" } },
-    alignment: { horizontal: "center", vertical: "center" }
+    alignment: { horizontal: "left", vertical: "center" }
   };
 
   for (let C = 0; C < headerRow.length; C++) {
@@ -626,9 +694,21 @@ const downloadExcel = () => {
 
   // 8. Column Widths
   worksheet["!cols"] = [
-    { wch: 6 }, { wch: 18 }, { wch: 25 }, { wch: 10 }, { wch: 22 },
-    { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 18 }, { wch: 12 }, { wch: 20 }
-  ];
+  { wch: 6 },   // No.
+  { wch: 20 },  // Barangay
+  { wch: 16 },  // Last Name
+  { wch: 16 },  // First Name
+  { wch: 16 },  // Middle Name
+  { wch: 6 },   // Suffix
+  { wch: 10 },  // Gender
+  { wch: 25 },  // School
+  { wch: 22 },  // Course
+  { wch: 14 },  // Year
+  { wch: 18 },  // IP
+  { wch: 12 },  // Type
+  { wch: 12 },  // Status
+  { wch: 25 }   // Remarks (longest)
+];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Scholars");
@@ -650,7 +730,7 @@ const downloadExcel = () => {
     new TableRow({
       tableHeader: true,
       children: [
-        "No.", "Barangay", "Name", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
+        "No.", "Barangay", "Last Name", "First Name", "Middle Name", "Suffix", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
       ].map(text => 
         new TableCell({
           shading: { fill: "10377A", type: ShadingType.CLEAR },
@@ -667,14 +747,17 @@ const downloadExcel = () => {
 
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph(String(i + 1))] }),
-          new TableCell({ children: [new Paragraph(s.barangay)] }),
-          new TableCell({ children: [new Paragraph(`${s.lastname}, ${s.firstname} ${s.middlename || ""}`)] }),
-          new TableCell({ children: [new Paragraph(s.gender)] }),
-          new TableCell({ children: [new Paragraph(s.school)] }),
-          new TableCell({ children: [new Paragraph(s.course || "-")] }),
-          new TableCell({ children: [new Paragraph(s.year_level || "-")] }),
-          new TableCell({ 
+          new TableCell({ width: { size: 800, type: WidthType.DXA }, children: [new Paragraph(String(i + 1))] }),
+          new TableCell({ width: { size: 2000, type: WidthType.DXA }, children: [new Paragraph(s.barangay)] }),
+          new TableCell({ width: { size: 2200, type: WidthType.DXA }, children: [new Paragraph(s.lastname)] }),
+          new TableCell({ width: { size: 2200, type: WidthType.DXA }, children: [new Paragraph(s.firstname)] }),
+          new TableCell({ width: { size: 2000, type: WidthType.DXA }, children: [new Paragraph(s.middlename || "-")] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.suffix || "-")] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.gender)] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.school)] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.course || "-")] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.year_level || "-")] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA },
             children: s.is_ip ? [
               new Paragraph({ text: "IP", alignment: AlignmentType.CENTER }),
               new Paragraph({ 
@@ -683,8 +766,8 @@ const downloadExcel = () => {
               })
             ] : [new Paragraph({ text: "Not IP", alignment: AlignmentType.CENTER })]
           }),
-          new TableCell({ children: [new Paragraph(s.scholarship_types?.name || "-")] }),
-          new TableCell({
+          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.scholarship_types?.name || "-")] }),
+          new TableCell({ width: { size: 1200, type: WidthType.DXA },
   children: [
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -1037,105 +1120,114 @@ const downloadExcel = () => {
 </div>
 )}
 
-        <IonGrid>
-  {/* HEADER ROW - Total Size: 12.0 */}
-  <IonRow style={{fontWeight:'bold', borderBottom:'2px solid #000', background: '#10377a', color: '#ffffff'}}>
-    {showSelect && <IonCol size="0.8">Select</IonCol>}
-    <IonCol size="0.4">No.</IonCol>
-    <IonCol size="1.0">Barangay</IonCol>
-    {/* Mo-adjust ang Name depende kung naay Select o wala para maintain ang 12 total */}
-    <IonCol size={showSelect ? "1.6" : "2"}>Name</IonCol>
-    <IonCol size="0.7">Gender</IonCol>
-    <IonCol size={showSelect ? "1.3" : "1.7"}>School</IonCol>
-    <IonCol size="1.3">Course</IonCol>
-    <IonCol size="1.2">Year</IonCol>
-    <IonCol size="0.8">IP</IonCol>
-    <IonCol size="1.0">Type</IonCol>
-    <IonCol size="1.0">Status</IonCol>
-    <IonCol size="0.9" className="ion-text-center">Action</IonCol>
-  </IonRow>
-
-  {filteredStudents.map((student, index) => (
-    <IonRow key={student.id}
-      style={{ backgroundColor: getRowColor(student.status) }}
-    >
-      {showSelect && (
-        <IonCol size="0.8">
-          <input
-            type="checkbox"
-            checked={selectedStudents.includes(student.id)}
-            onChange={() => toggleSelectStudent(student.id)}
-          />
-        </IonCol>
-      )}
-      <IonCol size="0.4">{index + 1}</IonCol>
-      <IonCol size="1.0">{student.barangay}</IonCol>
-      <IonCol size={showSelect ? "1.6" : "2"}>
-        {student.lastname}, {student.firstname} {student.middlename}
-      </IonCol>
-      <IonCol size="0.7">{student.gender}</IonCol>
-      <IonCol size={showSelect ? "1.3" : "1.7"}>{student.school}</IonCol>
-      <IonCol size="1.3">{student.course || '-'}</IonCol>
-      <IonCol size="1.2">
-        {/* Imong original Year Level logic (Graduated/Select/Text) */}
-        {student.status === 'Graduated' ? (
-          <IonText color="success"><b>Graduated</b></IonText>
-        ) : showSelect ? (
-          <IonSelect
-            value={student.year_level}
-            placeholder="-"
-            onIonChange={e => updateYearLevel(student.id, e.detail.value)}
-          >
-            <IonSelectOption value="1st Year">1st Year</IonSelectOption>
-            <IonSelectOption value="2nd Year">2nd Year</IonSelectOption>
-            <IonSelectOption value="3rd Year">3rd Year</IonSelectOption>
-            <IonSelectOption value="4th Year">4th Year</IonSelectOption>
-            <IonSelectOption value="5th Year">5th Year</IonSelectOption>
-          </IonSelect>
-        ) : (
-          <IonText>{student.year_level || '-'}</IonText>
-        )}
-      </IonCol>
-      <IonCol size="0.8">
-        {/* Imong original IP logic */}
-        {student.is_ip ? (
-          <div>
-            <IonText>IP</IonText>
-            <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
-              {student.ip_group || 'No Tribe'}
-            </div>
-          </div>
-        ) : (
-          <IonText>Not IP</IonText>
-        )}
-      </IonCol>
-      <IonCol size="1.0">{student.scholarship_types?.name || '-'}</IonCol>
-      <IonCol size="1.0">
-        {/* Imong original Status logic */}
-        <IonText color={getStatusColor(student.status)}>
-          {student.status || 'On-going'}
-        </IonText>
-        {student.status === 'Stopped' && student.remarks && (
-          <div style={{ fontSize: '11px', color: '#eb445a', marginTop: '4px', fontStyle: 'italic' }}>
-            Reason: {student.remarks}
-          </div>
-        )}
-      </IonCol>
-
-      {/* UPDATE BUTTON - Gi-set og 1.2 para dili mapisat ang text */}
-      <IonCol size="0.9" >
-        <IonButton
-          size="small"
-          color="primary"
-          onClick={() => handleUpdate(student.id)}
-          style={{ fontSize: '10px', height: '25px', width: '100%' }}
-        >
-          Update
-        </IonButton>
-      </IonCol>
+<div style={{ overflowX: 'auto', width: '100%' }}>
+  <IonGrid style={{ minWidth: '1300px', width: '100%' }}>
+    
+    {/* HEADER ROW - Kinahanglan naay matching sizes sa Data Row */}
+    <IonRow style={{ fontWeight: 'bold', borderBottom: '2px solid #000', background: '#10377a', color: '#ffffff' }}>
+      {showSelect && <IonCol size="0.4">Select</IonCol>}
+      <IonCol size="0.4">No.</IonCol>
+      <IonCol size="1">Barangay</IonCol>
+      <IonCol size="1">Last Name</IonCol>
+      <IonCol size="1">First Name</IonCol>
+      <IonCol size="0.9">Middle</IonCol>
+      <IonCol size="0.5">Suffix</IonCol>
+      <IonCol size="0.6">Gender</IonCol>
+      <IonCol size="1.3">School</IonCol>
+      <IonCol size="1.3">Course</IonCol>
+      <IonCol size="0.6">Year</IonCol>
+      <IonCol size="0.7">IP Status</IonCol>
+      <IonCol size="0.6">Type</IonCol>
+      <IonCol size="0.9">Status</IonCol>
+      <IonCol size="0.5" className="ion-text-center">Action</IonCol>
     </IonRow>
-  ))}
-</IonGrid>
+
+    {filteredStudents.map((student, index) => (
+      <IonRow key={student.id} style={{ backgroundColor: getRowColor(student.status), borderBottom: '1px solid #ddd', alignItems: 'center' }}>
+        
+        {showSelect && (
+          <IonCol size="0.4" style={{ textAlign: 'center' }}>
+            <input
+              type="checkbox"
+              checked={selectedStudents.includes(student.id)}
+              onChange={() => toggleSelectStudent(student.id)}
+            />
+          </IonCol>
+        )}
+
+        <IonCol size="0.4">{index + 1}</IonCol>
+        <IonCol size="1">{student.barangay}</IonCol>
+        <IonCol size="1">{student.lastname}</IonCol>
+        <IonCol size="1">{student.firstname}</IonCol>
+        <IonCol size="0.9">{student.middlename || '-'}</IonCol>
+        <IonCol size="0.5">{student.suffix || '-'}</IonCol>
+        <IonCol size="0.6">{student.gender}</IonCol>
+        
+        {/* Consistent Size para sa School */}
+        <IonCol size="1.3">{student.school}</IonCol>
+        
+        <IonCol size="1.3">{student.course || '-'}</IonCol>
+        
+        <IonCol size="0.6">
+          {student.status === 'Graduated' ? (
+            <IonText color="success"><b>Graduated</b></IonText>
+          ) : showSelect ? (
+            <IonSelect
+              interface="popover"
+              value={student.year_level}
+              onIonChange={e => updateYearLevel(student.id, e.detail.value)}
+              
+            >
+              <IonSelectOption value="1st Year">1st Yr</IonSelectOption>
+              <IonSelectOption value="2nd Year">2nd Yr</IonSelectOption>
+              <IonSelectOption value="3rd Year">3rd Yr</IonSelectOption>
+              <IonSelectOption value="4th Year">4th Yr</IonSelectOption>
+              <IonSelectOption value="5th Year">5th Yr</IonSelectOption>
+              
+            </IonSelect>
+          ) : (
+            <IonText >{student.year_level || '-'}</IonText>
+          )}
+        </IonCol>
+
+        <IonCol size="0.7">
+          <IonText>{student.is_ip ? 'IP' : 'Not IP'}</IonText>
+          {student.is_ip && <div style={{ fontSize: '9px', color: '#666' }}>{student.ip_group}</div>}
+        </IonCol>
+
+        <IonCol size="0.6">{student.scholarship_types?.name || '-'}</IonCol>
+        
+        <IonCol size="1">
+          <IonText color={getStatusColor(student.status)} style={{ fontWeight: 'bold' }}>
+            {student.status || 'On-going'}
+          </IonText>
+        </IonCol>
+
+        <IonCol size="0.5"> {/* Gi-adjust ang size gikan 0.8 ngadto sa 1.2 para naay space ang duha ka button */}
+          <div style={{ display: 'flex', flexDirection: 'row', gap: '4px', justifyContent: 'center' }}>
+            <IonButton 
+              size="small" 
+              color="primary" 
+              onClick={() => handleUpdate(student.id)} 
+              style={{ fontSize: '10px', height: '28px', margin: 0, flex: '1' }}
+              >
+             Update
+            </IonButton>
+    
+            <IonButton 
+              size="small" 
+              color="danger" 
+              onClick={() => handleDelete(student.id)} 
+              style={{ fontSize: '10px', height: '28px', margin: 0, flex: '1' }}
+              >
+              Delete
+            </IonButton>
+          </div>
+        </IonCol>
+      </IonRow>
+    ))}
+  </IonGrid>
+</div>
 
       </IonContent>
       <IonPopover
