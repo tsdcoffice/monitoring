@@ -6,6 +6,7 @@ import {
 } from '@ionic/react';
 
 import { useParams, useHistory, useLocation } from 'react-router-dom';
+import { useIonViewWillEnter } from '@ionic/react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -114,11 +115,19 @@ const courseSlugMap: { [slug: string]: string } = {
   "smaw-nc2": "Shielded Metal Arc Welding(SMAW) NC II"
 };
 
-const barangays = [
-  "Agusan Canyon","Alae","Dahilayan" ,"Dalirig" ,"Damilag" ,"Dicklum","Guilang-Guilang","Kalugmanan",
-  "Lindaban" ,"Lingion","Lunocan","Maluko", "Mambatangan" ,"Mampayag", "Minsuro" , "Mantibugao", 
-  "San Miguel" , "Sankanan" ,"Santiago" , "Santo Niño" , "Tankulan (Pob.)","Ticala"
-  
+const allCourses = [
+  "Barista","Barangay Health Services NC II","Bayong Making",
+  "Beauty Care (Nail Care, Hair and Make-up)","Bookkeeping NC III",
+  "Bread and Pastry Production","Community Nutrition Services",
+  "Cookery","Dressmaking NC II","Driving NC II",
+  "Electrical Installation and Maintenance NC II",
+  "Emergency Medical Services NC II","Food Processing",
+  "Garbage Collection NC II","Housekeeping NC II",
+  "Masonry and Hallow Blocks","Massage Therapy",
+  "Organic Agriculture NC II","Pineapple Processing",
+  "Plumbing","Scaffolding","Security Services NC II",
+  "Shielded Metal Arc Welding(SMAW) NC I",
+  "Shielded Metal Arc Welding(SMAW) NC II"
 ];
 
 const TraineeList: React.FC = () => {
@@ -254,13 +263,39 @@ useEffect(() => {
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedTrainingType, setSelectedTrainingType] = useState('');
   const [selectedBatchFilter, setSelectedBatchFilter] = useState('');
+  const [selectedScholarship, setSelectedScholarship] = useState('');
+const [availableScholarships, setAvailableScholarships] = useState<string[]>([]);
+const [selectedScholarshipYear, setSelectedScholarshipYear] = useState('');
+const [availableScholarshipYears, setAvailableScholarshipYears] = useState<string[]>([]);
+const [selectedGender, setSelectedGender] = useState('');
+const [availableGenders, setAvailableGenders] = useState<string[]>([]);
+const [selectedStatus, setSelectedStatus] = useState('');
+const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
   const [availableBatches, setAvailableBatches] = useState<string[]>([]);
+  const [selectedFilterYear, setSelectedFilterYear] = useState('');
+const [availableFilterYears, setAvailableFilterYears] = useState<string[]>([]);
+
+  const [dynamicBarangays, setDynamicBarangays] = useState<string[]>([]);
 
   const [sortOption, setSortOption] = useState('date_desc');
   const [showFilter, setShowFilter] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [fullTextModal, setFullTextModal] = useState<{ open: boolean; title: string; content: string }>({
+  open: false, title: '', content: ''
+});
+
+const showFullText = (title: string, content: string) => {
+  if (!content || content === '-') return;
+  setFullTextModal({ open: true, title, content });
+};
 
   const tableRef = useRef<HTMLDivElement>(null);
+  useIonViewWillEnter(() => {
+  setRefreshKey(prev => prev + 1);
+});
 
   /* =========================
      SEARCH DEBOUNCE
@@ -313,10 +348,181 @@ useEffect(() => {
 }, [selectedBarangay]);
 
 useEffect(() => {
+  const fetchStatuses = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('status');
+
+    if (!data) return;
+
+    const unique = Array.from(
+      new Set(data.map((d: any) => d.status).filter(Boolean))
+    ).sort() as string[];
+
+    setAvailableStatuses(unique);
+  };
+
+  fetchStatuses();
+}, [refreshKey]);
+
+useEffect(() => {
+  const fetchGenders = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('gender');
+
+    if (!data) return;
+
+    const unique = Array.from(
+      new Set(data.map((d: any) => d.gender).filter(Boolean))
+    ).sort() as string[];
+
+    setAvailableGenders(unique);
+  };
+
+  fetchGenders();
+}, [refreshKey]);
+
+useEffect(() => {
+  const fetchScholarships = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('scholarship, scholarship_other');
+
+    if (!data) return;
+
+    const unique = Array.from(
+      new Set(
+        data.map((d: any) =>
+          d.scholarship === 'Other'
+            ? d.scholarship_other || 'Other'
+            : d.scholarship
+        ).filter(Boolean)
+      )
+    ).sort() as string[];
+
+    setAvailableScholarships(unique);
+  };
+
+  fetchScholarships();
+}, [refreshKey]);
+
+useEffect(() => {
+  const fetchBarangays = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('barangay');
+
+    if (!data) return;
+
+    const unique = Array.from(
+      new Set(data.map((d: any) => d.barangay).filter(Boolean))
+    ) as string[];
+
+    const deduplicated = unique.filter(b =>
+      !unique.some(
+        other =>
+          other !== b &&
+          other.toLowerCase().startsWith(b.toLowerCase()) &&
+          other.length > b.length
+      )
+    );
+
+    deduplicated.sort((a, b) => a.localeCompare(b));
+
+    setDynamicBarangays(deduplicated);
+  };
+
+  fetchBarangays();
+}, [refreshKey]);
+
+useEffect(() => {
   if (selectedTrainingType && selectedTrainingType !== batchDetails?.course) {
     setSelectedBatchFilter('');
   }
 }, [selectedTrainingType, batchDetails]);
+
+useEffect(() => {
+  setSelectedFilterYear('');
+  setSelectedBatchFilter('');
+
+  if (!selectedTrainingType) {
+    setAvailableFilterYears([]);
+    return;
+  }
+
+  const fetchFilterYears = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('year_enrolled')
+      .eq('course', selectedTrainingType);
+
+    if (!data) return;
+
+    const years = Array.from(
+      new Set(data.map((d: any) => d.year_enrolled).filter(Boolean))
+    ).sort((a: any, b: any) => b - a);
+
+    setAvailableFilterYears(years.map(String));
+  };
+
+  fetchFilterYears();
+}, [selectedTrainingType]);
+
+useEffect(() => {
+  setSelectedScholarshipYear('');
+
+  if (!selectedScholarship) {
+    setAvailableScholarshipYears([]);
+    return;
+  }
+
+  const fetchScholarshipYears = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('year_enrolled, scholarship, scholarship_other')
+      .or(
+        `scholarship.eq.${selectedScholarship},and(scholarship.eq.Other,scholarship_other.eq.${selectedScholarship})`
+      );
+
+    if (!data) return;
+
+    const years = Array.from(
+      new Set(data.map((d: any) => d.year_enrolled).filter(Boolean))
+    ).sort((a: any, b: any) => b - a);
+
+    setAvailableScholarshipYears(years.map(String));
+  };
+
+  fetchScholarshipYears();
+}, [selectedScholarship]);
+
+useEffect(() => {
+  setSelectedBatchFilter('');
+
+  if (!selectedTrainingType || !selectedFilterYear) {
+    setAvailableBatches([]);
+    return;
+  }
+
+  const fetchAvailableBatches = async () => {
+    const { data } = await supabase
+      .from('trainees')
+      .select('batch')
+      .eq('course', selectedTrainingType)
+      .eq('year_enrolled', Number(selectedFilterYear));
+
+    if (!data) return;
+
+    const batches = Array.from(
+      new Set(data.map((d: any) => d.batch).filter(Boolean))
+    ).sort((a: any, b: any) => a - b);
+
+    setAvailableBatches(batches.map(String));
+  };
+
+  fetchAvailableBatches();
+}, [selectedTrainingType, selectedFilterYear]);
 
   /* =========================
      FETCH TRAINEES
@@ -324,6 +530,7 @@ useEffect(() => {
 // BAG-O NGA CODE
 useEffect(() => {
   const fetchTrainees = async () => {
+    setIsLoading(true);
     let query = supabase.from('trainees').select('*');
 
     // Filter by Course (Slug)
@@ -347,23 +554,61 @@ useEffect(() => {
     }
 
     if (selectedBarangay) query = query.eq('barangay', selectedBarangay);
+    if (selectedGender) query = query.eq('gender', selectedGender);
+    if (selectedStatus) query = query.eq('status', selectedStatus);
 
-    // ✅ YEAR FILTER
+    if (selectedScholarship) {
+  query = query.or(
+    `scholarship.eq.${selectedScholarship},and(scholarship.eq.Other,scholarship_other.eq.${selectedScholarship})`
+  );
+}
+
+if (selectedScholarshipYear) {
+      query = query.eq('year_enrolled', Number(selectedScholarshipYear));
+    }
+
+    // ✅ YEAR FILTER (Report Mode)
 if (selectedYear) {
   query = query.eq('year_enrolled', Number(selectedYear));
 }
 
-    const { data } = await query;
+    // ✅ YEAR FILTER (Normal Filter Mode)
+if (selectedFilterYear && !selectedYear) {
+  query = query.eq('year_enrolled', Number(selectedFilterYear));
+}
+
+    // Sort by year_enrolled first, then by created_at (latest input)
+if (sortOption === 'az') {
+  query = query.order('lastname', { ascending: true });
+} else if (sortOption === 'za') {
+  query = query.order('lastname', { ascending: false });
+} else if (sortOption === 'date_asc') {
+  query = query.order('year_enrolled', { ascending: true }).order('created_at', { ascending: true });
+} else {
+  // default: date_desc — newest first, grouped by year_enrolled
+  query = query.order('year_enrolled', { ascending: false }).order('created_at', { ascending: false });
+}
+
+const { data } = await query;
+
+
     setTrainees(data || []);
+    setIsLoading(false);
   };
   fetchTrainees();
-}, [slug, batch, debouncedSearch, selectedBarangay, selectedTrainingType, selectedBatchFilter, selectedYear, sortOption]);
+}, [slug, batch, debouncedSearch, selectedBarangay, selectedTrainingType, selectedBatchFilter, selectedYear, selectedFilterYear, selectedScholarship, selectedScholarshipYear, selectedGender, selectedStatus, sortOption, refreshKey]);
 
   const resetFilters = () => {
   setSelectedBarangay('');
   setSelectedTrainingType('');
+  setSelectedFilterYear('');
   setSelectedBatchFilter('');
-  setSelectedYear('');   // ⭐ ADD THIS
+  setSelectedScholarship('');
+  setSelectedGender('');
+  setSelectedStatus('');
+  setSelectedScholarshipYear('');
+  setAvailableScholarshipYears([]);
+  setSelectedYear('');
   setSearchText('');
   setSortOption('date_desc');
 };
@@ -1232,11 +1477,13 @@ new Paragraph(" "),
               value={searchText}
               onIonInput={e => setSearchText(e.detail.value!)}
               style={{
-                width:'180px',
-                border:'1px solid #ccc',
-                borderRadius:'20px',
-                paddingLeft:'10px'
-              }}
+  width:'280px',
+  height:'40px',
+  border:'2px solid #10377a',
+  borderRadius:'20px',
+  paddingLeft:'15px',
+  fontSize:'15px'
+}}
             />
 
             <IonButton onClick={() => setShowFilter(true)}>
@@ -1270,7 +1517,7 @@ new Paragraph(" "),
   isOpen={showFilter}
   onDidDismiss={() => setShowFilter(false)}
 >
-  <IonList style={{ padding: 15, minWidth: 250 }}>
+  <IonList style={{ padding: 15, minWidth: 350 }}>
 
     {/* MODE TOGGLE BUTTON */}
     <IonItem lines="none">
@@ -1315,41 +1562,117 @@ new Paragraph(" "),
             onIonChange={(e) => setSelectedBarangay(e.detail.value)}
           >
             <IonSelectOption value="">All</IonSelectOption>
-            {barangays.map(b => (
-              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-            ))}
+            {dynamicBarangays.map(b => (
+  <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+))}
           </IonSelect>
         </IonItem>
 
-        <IonItem>
-          <IonLabel>Training Type</IonLabel>
-          <IonSelect
-            interface="alert" // automatic filter
-            value={selectedTrainingType}
-            onIonChange={(e) => setSelectedTrainingType(e.detail.value)}
-          >
-            <IonSelectOption value="">All</IonSelectOption>
-            {(selectedBarangay ? filteredTrainingTypes : trainingTypes).map(t => (
-              <IonSelectOption key={t.name} value={t.name}>
-  {t.name}
-</IonSelectOption>
-            ))}
-          </IonSelect>
-        </IonItem>
+<IonItem>
+  <IonLabel>Gender</IonLabel>
+  <IonSelect
+    interface="alert"
+    value={selectedGender}
+    onIonChange={(e) => setSelectedGender(e.detail.value)}
+  >
+    <IonSelectOption value="">All</IonSelectOption>
+    {availableGenders.map(g => (
+      <IonSelectOption key={g} value={g}>{g}</IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
 
         <IonItem>
-          <IonLabel>Batch</IonLabel>
-          <IonSelect
-            interface="alert" // automatic filter
-            value={selectedBatchFilter}
-            onIonChange={(e) => setSelectedBatchFilter(e.detail.value)}
-          >
-            <IonSelectOption value="">All</IonSelectOption>
-            {availableBatches.map(b => (
-              <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-            ))}
-          </IonSelect>
-        </IonItem>
+  <IonLabel>Course</IonLabel>
+  <IonSelect
+    interface="alert"
+    value={selectedTrainingType}
+    onIonChange={(e) => setSelectedTrainingType(e.detail.value)}
+  >
+    <IonSelectOption value="">All</IonSelectOption>
+    {allCourses.map(course => (
+      <IonSelectOption key={course} value={course}>
+        {course}
+      </IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
+
+<IonItem>
+  <IonLabel>Scholarship</IonLabel>
+  <IonSelect
+    interface="alert"
+    value={selectedScholarship}
+    onIonChange={(e) => setSelectedScholarship(e.detail.value)}
+  >
+    <IonSelectOption value="">All</IonSelectOption>
+    {availableScholarships.map(s => (
+      <IonSelectOption key={s} value={s}>{s}</IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
+
+{selectedScholarship && (
+  <IonItem>
+    <IonLabel>Year</IonLabel>
+    <IonSelect
+      interface="alert"
+      value={selectedScholarshipYear}
+      onIonChange={(e) => setSelectedScholarshipYear(e.detail.value)}
+    >
+      <IonSelectOption value="">All</IonSelectOption>
+      {availableScholarshipYears.map(y => (
+        <IonSelectOption key={y} value={y}>{y}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
+
+<IonItem>
+  <IonLabel>Status</IonLabel>
+  <IonSelect
+    interface="alert"
+    value={selectedStatus}
+    onIonChange={(e) => setSelectedStatus(e.detail.value)}
+  >
+    <IonSelectOption value="">All</IonSelectOption>
+    {availableStatuses.map(s => (
+      <IonSelectOption key={s} value={s}>{s}</IonSelectOption>
+    ))}
+  </IonSelect>
+</IonItem>
+
+        {selectedTrainingType && (
+  <IonItem>
+    <IonLabel>Year</IonLabel>
+    <IonSelect
+      interface="alert"
+      value={selectedFilterYear}
+      onIonChange={(e) => setSelectedFilterYear(e.detail.value)}
+    >
+      <IonSelectOption value="">All</IonSelectOption>
+      {availableFilterYears.map(y => (
+        <IonSelectOption key={y} value={y}>{y}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
+
+{selectedTrainingType && selectedFilterYear && (
+  <IonItem>
+    <IonLabel>Batch</IonLabel>
+    <IonSelect
+      interface="alert"
+      value={selectedBatchFilter}
+      onIonChange={(e) => setSelectedBatchFilter(e.detail.value)}
+    >
+      <IonSelectOption value="">All</IonSelectOption>
+      {availableBatches.map(b => (
+        <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
       </>
     )}
 
@@ -1368,8 +1691,10 @@ new Paragraph(" "),
 
         <IonText>
   <h2>
-{selectedYear
+{isReportMode && selectedYear
   ? `Overall Trainees: ${yearSummary.reduce((a,b)=>a+b.trainees,0)}`
+  : isLoading
+    ? `Loading...`
   : `Total Displayed: ${trainees.length}`
 }
 </h2>
@@ -1508,7 +1833,7 @@ borderRadius:"6px"
             padding: "10px"
           }}
         >
-          <IonGrid style={{ minWidth: '2600px', padding: 0 }}>
+          <IonGrid style={{ minWidth: '3250px', padding: 0 }}>
             {/* HEADER ROW */}
             <IonRow style={{ flexWrap: 'nowrap' }}>
               <IonCol style={{ ...tableHeaderStyle, width: '50px', flex: 'none' }}>No.</IonCol>
@@ -1528,6 +1853,8 @@ borderRadius:"6px"
               <IonCol style={{ ...tableHeaderStyle, width: '60px', flex: 'none' }}>Age</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '300px', flex: 'none' }}>Birthplace</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '400px', flex: 'none' }}>Education</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '400px', flex: 'none' }}>Classification</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '250px', flex: 'none' }}>Disability</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '400px', flex: 'none' }}>Course</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '100px', flex: 'none' }}>Batch</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '150px', flex: 'none' }}>Scholarship</IonCol>
@@ -1555,7 +1882,12 @@ borderRadius:"6px"
                 <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.city}</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.province}</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.contact}</IonCol>
-                <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.email}</IonCol>
+               <IonCol
+  style={{ ...tableCellStyle, width: '250px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+  onClick={() => showFullText('Email', t.email)}
+>
+  {t.email}
+</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '150px', flex: 'none' }}>{t.gender}</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>{t.civil_status}</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '300px', flex: 'none' }}>{t.employment}</IonCol>
@@ -1563,11 +1895,33 @@ borderRadius:"6px"
                   {t.birth_month} {t.birth_day}, {t.birth_year}
                 </IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '60px', flex: 'none' }}>{t.age}</IonCol>
-                <IonCol style={{ ...tableCellStyle, width: '300px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {t.birthplace_city}, {t.birthplace_province}
-                </IonCol>
-                <IonCol style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.educational_attainment}</IonCol>
-                <IonCol style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.course}</IonCol>
+                <IonCol
+  style={{ ...tableCellStyle, width: '300px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+  onClick={() => showFullText('Birthplace', `${t.birthplace_city}, ${t.birthplace_province}`)}
+>
+  {t.birthplace_city}, {t.birthplace_province}
+</IonCol>
+                <IonCol
+  style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+  onClick={() => showFullText('Education', t.educational_attainment)}
+>
+  {t.educational_attainment}
+</IonCol>
+                <IonCol
+  style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+  onClick={() => showFullText('Classification', Array.isArray(t.classification) ? t.classification.join(', ') : t.classification || '-')}
+>
+  {Array.isArray(t.classification) ? t.classification.join(', ') : t.classification || '-'}
+</IonCol>
+<IonCol style={{ ...tableCellStyle, width: '250px', flex: 'none' }}>
+  {t.disability === 'Other' ? t.disability_other || 'Other' : t.disability || '-'}
+</IonCol>
+                <IonCol
+  style={{ ...tableCellStyle, width: '400px', flex: 'none', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+  onClick={() => showFullText('Course', t.course)}
+>
+  {t.course}
+</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '100px', flex: 'none' }}>{t.batch}</IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '150px', flex: 'none' }}>
                   {t.scholarship === "Other" ? t.scholarship_other : t.scholarship}
@@ -1616,6 +1970,40 @@ borderRadius:"6px"
         </div>
       )}
     </IonContent>
+
+
+{fullTextModal.open && (
+  <div
+    onClick={() => setFullTextModal({ open: false, title: '', content: '' })}
+    style={{
+      position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+      background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}
+  >
+    <div
+      onClick={e => e.stopPropagation()}
+      style={{
+        background: '#fff', borderRadius: '10px', padding: '20px',
+        maxWidth: '500px', width: '90%', boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+      }}
+    >
+      <div style={{ fontWeight: 'bold', color: '#10377a', marginBottom: '10px', fontSize: '14px' }}>
+        {fullTextModal.title}
+      </div>
+      <div style={{ fontSize: '14px', lineHeight: '1.6', wordBreak: 'break-word' }}>
+        {fullTextModal.content}
+      </div>
+      <IonButton
+        expand="block"
+        style={{ marginTop: '15px' }}
+        onClick={() => setFullTextModal({ open: false, title: '', content: '' })}
+      >
+        Close
+      </IonButton>
+    </div>
+  </div>
+)}
 
     <IonPopover isOpen={showDownload} onDidDismiss={() => setShowDownload(false)}>
       <IonList style={{ minWidth: '200px' }}>
