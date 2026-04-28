@@ -24,10 +24,11 @@ const courses = [
 
 const classifications = [
   "4Ps Beneficiary", "Agrarian Reform Beneficiary", "Balik Probinsya", "Displaced Workers",
-  "Drug Dependents Surrenderees/Surrenderers", "Farmers and Fishermen", 
-  "Indigenous People & Cultural Communities", "Industry workers", "Inmates and Detainees",
+  "Drug Dependents Surrenderees/Surrenderers","Family Members of AFP and PNP Killed-in-Action","Family Members of AFP and PNP Wounded-in-Action", "Farmers and Fishermen", 
+  "Indigenous People & Cultural Communities", "Industry workers", "Inmates and Detainees", "MILF Beneficiary",
   "Out-of-School-Youth", "Overseas Filipino Workers (OFW) dependent",
-  "RCEF-RESP", "Returning/Repatriated OFW", "Student", "TESDA Alumni", "Others"
+  "RCEF-RESP", "Rebel Returnees/Decommissioned Combatants","Returning/Repatriated OFW", "Student", "TESDA Alumni", "TVET Trainers",
+  "Uniformed Personnel", "Victim of Natural Disasters and Calamities","Wounded-in-Action AFP & PNP Peronnel","Others"
 ];
 
 interface Params { id: string; }
@@ -40,16 +41,19 @@ const UpdateTrainee: React.FC = () => {
   const [firstname, setFirstname] = useState('');
   const [middlename, setMiddlename] = useState('');
   const [lastname, setLastname] = useState('');
+  const [extension, setExtension] = useState('');
+  const [age, setAge] = useState('');
   const [barangay, setBarangay] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
-  const [contactNo, setContactNo] = useState('');
-  const [gender, setGender] = useState('');
+  const [contact, setContactNo] = useState('');
+  const [email, setEmail] = useState('');
+  const [Gender, setGender] = useState('');
   const [civilStatus, setCivilStatus] = useState('');
   const [employment, setEmployment] = useState('');
   const [birthdate, setBirthdate] = useState('');
-  const [birthCity, setBirthCity] = useState('');
-  const [birthProvince, setBirthProvince] = useState('');
+  const [birthplace_city, setBirthCity] = useState('');
+  const [birthplace_province, setBirthProvince] = useState('');
   const [education, setEducation] = useState('');
   const [classification, setClassification] = useState<string[]>([]);
   const [otherClassification, setOtherClassification] = useState('');
@@ -59,7 +63,8 @@ const UpdateTrainee: React.FC = () => {
   const [batch, setBatch] = useState('');
   const [scholarship, setScholarship] = useState('');
   const [otherScholarship, setOtherScholarship] = useState('');
-  const [status, setStatus] = useState(''); // BAG-O: Status State
+  const [yearEnrolled, setYearEnrolled] = useState('');
+  const [Trainingstatus, setStatus] = useState(''); // BAG-O: Status State
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,7 +75,7 @@ const UpdateTrainee: React.FC = () => {
     setLoading(true);
     const { data } = await supabase
       .from('trainees')
-      .select('*, course(name)')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -78,60 +83,129 @@ const UpdateTrainee: React.FC = () => {
       setFirstname(data.firstname || '');
       setMiddlename(data.middlename || '');
       setLastname(data.lastname || '');
+      setExtension(data.extension || '');
+      setAge(data.age || '');
       setBarangay(data.barangay || '');
       setCity(data.city || '');
       setProvince(data.province || '');
-      setContactNo(data.contact_no || '');
+      setContactNo(data.contact || '');
+      setEmail(data.email || '');
       setGender(data.gender || '');
       setCivilStatus(data.civil_status || '');
       setEmployment(data.employment || '');
-      setBirthdate(data.birthdate || '');
-      setBirthCity(data.birth_city || '');
-      setBirthProvince(data.birth_province || '');
+      const monthMap: { [key: string]: string } = {
+  January: '01',
+  February: '02',
+  March: '03',
+  April: '04',
+  May: '05',
+  June: '06',
+  July: '07',
+  August: '08',
+  September: '09',
+  October: '10',
+  November: '11',
+  December: '12'
+};
+
+const rawMonth = data.birth_month;
+const day = data.birth_day;
+const year = data.birth_year;
+
+const month =
+  isNaN(rawMonth)
+    ? monthMap[rawMonth] || '01'
+    : String(rawMonth).padStart(2, '0');
+
+if (month && day && year) {
+  setBirthdate(`${year}-${month}-${String(day).padStart(2, '0')}`);
+} else {
+  setBirthdate('');
+}
+      setBirthCity(data.birthplace_city || '');
+      setBirthProvince(data.birthplace_province || '');
       setEducation(data.educational_attainment || '');
       setClassification(data.classification || []);
       setOtherClassification(data.other_classification || '');
       setDisability(data.disability || 'None');
-      setOtherDisability(data.other_disability || '');
-      setSelectedCourse(data.course?.name || '');
+      setOtherDisability(data.disability_other || '');
+      setSelectedCourse(data.course || '');
       setBatch(data.batch || '');
-      setScholarship(data.scholarship_package || 'None');
-      setOtherScholarship(data.other_scholarship || '');
-      setStatus(data.status || 'Enrolled'); // Load status
+      setScholarship(data.scholarship || 'None');
+      setOtherScholarship(data.scholarship_other || '');
+      setYearEnrolled(data.year_enrolled || '');
+      setStatus(data.status || 'ENROLLED'); // Load status
     }
     setLoading(false);
   };
 
   const updateTrainee = async () => {
-    const { data: trainingData } = await supabase
-      .from('course')
-      .select('id')
-      .eq('name', selectedCourse)
-      .single();
+    let year = null;  
+let month = null;
+let day = null;
 
-    if (!trainingData) {
-      alert("Invalid Training Course Selected");
-      return;
-    }
+const reverseMonthMap: { [key: string]: string } = {
+  '01': 'January',
+  '02': 'February',
+  '03': 'March',
+  '04': 'April',
+  '05': 'May',
+  '06': 'June',
+  '07': 'July',
+  '08': 'August',
+  '09': 'September',
+  '10': 'October',
+  '11': 'November',
+  '12': 'December'
+};
+
+if (birthdate) {
+  [year, month, day] = birthdate.split('-');
+  month = reverseMonthMap[month] || month;
+}
 
     const { error } = await supabase
-      .from('trainees')
-      .update({
-        firstname, middlename, lastname, barangay, city, province,
-        contact_no: contactNo, gender, civil_status: civilStatus,
-        employment, birthdate, birth_city: birthCity, birth_province: birthProvince,
-        educational_attainment: education, classification, other_classification: otherClassification,
-        disability, other_disability: otherDisability, 
-        training_type_id: trainingData.id,
-        batch,
-        scholarship_package: scholarship, other_scholarship: otherScholarship,
-        status // I-save ang status
-      })
-      .eq('id', id);
+    .from('trainees')
+    .update({
+      firstname,
+      middlename,
+      lastname,
+      age,  
+      extension,
+      barangay,
+      city,
+      province,
+      contact: contact,
+      email,
+      gender: Gender,
+      civil_status: civilStatus,
+      employment,
+      birth_month: month || null,
+birth_day: day || null,
+birth_year: year || null,
+      birthplace_city: birthplace_city,
+      birthplace_province: birthplace_province,
+      educational_attainment: education,
+      classification,
+      other_classification: otherClassification,
+      disability,
+      disability_other: otherDisability,
+      course: selectedCourse,
+      batch,
+      scholarship,
+      scholarship_other: otherScholarship,
+      year_enrolled: yearEnrolled,
+      status: Trainingstatus
+    })
+    .eq('id', id);
 
-    if (error) alert(error.message);
-    else history.goBack();
-  };
+  if (error) {
+    alert(error.message);
+  } else {
+    history.goBack();
+  }
+};
+
 
   return (
     <IonPage>
@@ -152,6 +226,7 @@ const UpdateTrainee: React.FC = () => {
               <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">First Name</IonLabel><IonInput value={firstname} onIonInput={e => setFirstname(e.detail.value!.toUpperCase())} /></IonItem></IonCol>
               <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">Middle Name</IonLabel><IonInput value={middlename} onIonInput={e => setMiddlename(e.detail.value!.toUpperCase())} /></IonItem></IonCol>
               <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">Last Name</IonLabel><IonInput value={lastname} onIonInput={e => setLastname(e.detail.value!.toUpperCase())} /></IonItem></IonCol>
+              <IonCol size="12" sizeMd="3"><IonItem><IonLabel position="stacked">Extension</IonLabel><IonInput value={extension} onIonInput={e => setExtension(e.detail.value!.toUpperCase())}/></IonItem></IonCol>
             </IonRow>
           </IonGrid>
 
@@ -179,11 +254,14 @@ const UpdateTrainee: React.FC = () => {
               <IonCol size="12" sizeMd="4">
                 <IonItem><IonLabel position="stacked">Birthdate</IonLabel><IonInput type="date" value={birthdate} onIonChange={e => setBirthdate(e.detail.value!)} /></IonItem>
               </IonCol>
-              <IonCol size="12" sizeMd="4">
-                <IonItem><IonLabel position="stacked">Birth City</IonLabel><IonInput placeholder="City" value={birthCity} onIonInput={e => setBirthCity(e.detail.value!.toUpperCase())} /></IonItem>
+              <IonCol size="12" sizeMd="3">
+                <IonItem><IonLabel position="stacked">Age</IonLabel><IonInput type="number" value={age} onIonInput={e => setAge(e.detail.value!)}/></IonItem>
               </IonCol>
               <IonCol size="12" sizeMd="4">
-                <IonItem><IonLabel position="stacked">Birth Province</IonLabel><IonInput placeholder="Province" value={birthProvince} onIonInput={e => setBirthProvince(e.detail.value!.toUpperCase())} /></IonItem>
+                <IonItem><IonLabel position="stacked">Birth City</IonLabel><IonInput placeholder="City" value={birthplace_city} onIonInput={e => setBirthCity(e.detail.value!.toUpperCase())} /></IonItem>
+              </IonCol>
+              <IonCol size="12" sizeMd="4">
+                <IonItem><IonLabel position="stacked">Birth Province</IonLabel><IonInput placeholder="Province" value={birthplace_province} onIonInput={e => setBirthProvince(e.detail.value!.toUpperCase())} /></IonItem>
               </IonCol>
             </IonRow>
           </IonGrid>
@@ -191,22 +269,50 @@ const UpdateTrainee: React.FC = () => {
           {/* Contact, Batch, Gender, Civil Status */}
           <IonGrid className="ion-no-padding">
             <IonRow>
-              <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">Contact No.</IonLabel><IonInput type="tel" value={contactNo} onIonInput={e => setContactNo(e.detail.value!)} /></IonItem></IonCol>
+              <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">Contact No.</IonLabel><IonInput type="tel" value={contact} onIonInput={e => setContactNo(e.detail.value!)} /></IonItem></IonCol>
               <IonCol size="12" sizeMd="4"><IonItem><IonLabel position="stacked">Batch No.</IonLabel><IonInput type="number" value={batch} onIonInput={e => setBatch(e.detail.value!)} /></IonItem></IonCol>
             </IonRow>
             <IonRow>
+  <IonCol size="12" sizeMd="6">
+    <IonItem>
+      <IonLabel position="stacked">Email</IonLabel>
+      <IonInput
+        type="email"
+        value={email}
+        onIonInput={e => setEmail(e.detail.value!)}
+      />
+    </IonItem>
+  </IonCol>
+
+  <IonCol size="12" sizeMd="6">
+    <IonItem>
+      <IonLabel position="stacked">Employment</IonLabel>
+      <IonSelect
+        interface="popover"
+        value={employment}
+        onIonChange={e => setEmployment(e.detail.value)}
+      >
+        <IonSelectOption value="EMPLOYED">Wage-Employed</IonSelectOption>
+        <IonSelectOption value="UNEMPLOYED">Underemployed</IonSelectOption>
+        <IonSelectOption value="SELF-EMPLOYED">Self-Employed</IonSelectOption>
+        <IonSelectOption value="SELF-EMPLOYED">Unemployed</IonSelectOption>
+      </IonSelect>
+    </IonItem>
+  </IonCol>
+</IonRow>
+            <IonRow>
               <IonCol size="12" sizeMd="4">
                 <IonItem><IonLabel position="stacked">Gender</IonLabel>
-                  <IonSelect interface="popover" value={gender} onIonChange={e => setGender(e.detail.value)}>
-                    <IonSelectOption value="Male">Male</IonSelectOption>
-                    <IonSelectOption value="Female">Female</IonSelectOption>
+                  <IonSelect interface="popover" value={Gender} onIonChange={e => setGender(e.detail.value)}>
+                    <IonSelectOption value="MALE">MALE</IonSelectOption>
+                    <IonSelectOption value="FEMALE">FEMALE</IonSelectOption>
                   </IonSelect>
                 </IonItem>
               </IonCol>
               <IonCol size="12" sizeMd="4">
                 <IonItem><IonLabel position="stacked">Civil Status</IonLabel>
                   <IonSelect interface="popover" value={civilStatus} onIonChange={e => setCivilStatus(e.detail.value)}>
-                    {["Single", "Married", "Widow/er", "Common Law"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
+                    {["SINGLE", "MARRIED","SEPARATED/DIVORSED/ANNULLED", "WIDOW/ER", "COMMON LAW/LIVE IN"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
                   </IonSelect>
                 </IonItem>
               </IonCol>
@@ -238,9 +344,32 @@ const UpdateTrainee: React.FC = () => {
           <IonItem>
             <IonLabel position="stacked">Educational Attainment</IonLabel>
             <IonSelect interface="popover" value={education} onIonChange={e => setEducation(e.detail.value)}>
-              {["Elementary", "High School", "College Undergraduate", "College Graduate", "TVET Graduate"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
+              {["No Grade Completed","Elementary Undergraduate","Elementary Graduate", "High School Undergraduate", "High School Graduate",
+                "Junior High(K-12)","Senior High(K-12)", "Post-Secondary Non-Tertiary/ Technical Vocational Course Undergraduate",
+                "Post-Secondary Non-Tertiary/ Technical Vocational Course Graduate","College Undergraduate", "College Graduate", "Masteral", "Doctorate"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
             </IonSelect>
           </IonItem>
+
+          <IonItem>
+  <IonLabel position="stacked">Type of Disability</IonLabel>
+  <IonSelect
+    interface="popover"
+    value={disability}
+    onIonChange={e => setDisability(e.detail.value)}
+  >
+    <IonSelectOption value="None">None</IonSelectOption>
+    <IonSelectOption value="Visual">Mental/Intellectual</IonSelectOption>
+    <IonSelectOption value="Hearing">Hearing Disability</IonSelectOption>
+    <IonSelectOption value="Physical">Psychological Disability</IonSelectOption>
+    <IonSelectOption value="Mental">Visual Disabilty</IonSelectOption>
+    <IonSelectOption value="Mental">Speech Impairment</IonSelectOption>
+    <IonSelectOption value="Mental">Disabilty Due to Chronic Illness</IonSelectOption>
+    <IonSelectOption value="Mental">Orthopic Disability</IonSelectOption>
+    <IonSelectOption value="Mental">Multiple Disabilty</IonSelectOption>
+    <IonSelectOption value="Mental">Learning Disabilty</IonSelectOption>
+    <IonSelectOption value="Others">Others</IonSelectOption>
+  </IonSelect>
+</IonItem>
 
           <IonItem>
             <IonLabel position="stacked">Type of Training</IonLabel>
@@ -248,11 +377,21 @@ const UpdateTrainee: React.FC = () => {
               {courses.map(c => <IonSelectOption key={c} value={c}>{c}</IonSelectOption>)}
             </IonSelect>
           </IonItem>
+          <IonCol size="12" sizeMd="4">
+  <IonItem>
+    <IonLabel position="stacked">Year Enrolled</IonLabel>
+    <IonInput
+      type="number"
+      value={yearEnrolled}
+      onIonInput={e => setYearEnrolled(e.detail.value!)}
+    />
+  </IonItem>
+</IonCol>
 
           <IonItem>
-            <IonLabel position="stacked">Scholarship Package</IonLabel>
+            <IonLabel position="stacked">Type of Scholarship</IonLabel>
             <IonSelect interface="popover" value={scholarship} onIonChange={e => setScholarship(e.detail.value)}>
-              {["None", "TWSP", "STEP", "TTSP", "Others"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
+              {["None", "TWSP", "PESFA", "STEP", "TTSP", "Others"].map(s => <IonSelectOption key={s} value={s}>{s}</IonSelectOption>)}
             </IonSelect>
           </IonItem>
           {scholarship === 'Others' && (
@@ -262,12 +401,13 @@ const UpdateTrainee: React.FC = () => {
           {/* Status Section - HIGHLIGHTED */}
           <IonLabel position="stacked" style={{color: '#10377a'}}>TRAINING STATUS</IonLabel>
             
-            <IonSelect interface="popover" value={status} onIonChange={e => setStatus(e.detail.value)}>
-              <IonSelectOption value="Enrolled">Enrolled</IonSelectOption>
-              <IonSelectOption value="Completed">Completed</IonSelectOption>
-              <IonSelectOption value="Dropped Out">Dropped Out</IonSelectOption>
+            <IonSelect interface="popover" value={Trainingstatus} onIonChange={e => setStatus(e.detail.value)}>
+              <IonSelectOption value="ENROLLED">ENROLLED</IonSelectOption>
+              <IonSelectOption value="COMPLETED">COMPLETED</IonSelectOption>
+              <IonSelectOption value="DROPPED OUT">DROPPED OUT</IonSelectOption>
             </IonSelect>
           
+
 
         </IonList>
 

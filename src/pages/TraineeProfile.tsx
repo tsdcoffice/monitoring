@@ -217,7 +217,7 @@ const TraineeProfile: React.FC = () => {
 
         <IonGrid>
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.lastname}
                 placeholder="LAST NAME"
@@ -226,7 +226,7 @@ const TraineeProfile: React.FC = () => {
                 onKeyDown={e=>handleEnter(e,inputRefs.firstname)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.firstname}
                 placeholder="FIRST NAME"
@@ -235,7 +235,7 @@ const TraineeProfile: React.FC = () => {
                 onKeyDown={e=>handleEnter(e,inputRefs.middlename)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.middlename}
                 placeholder="MIDDLE NAME"
@@ -244,7 +244,7 @@ const TraineeProfile: React.FC = () => {
                 onKeyDown={e=>handleEnter(e,inputRefs.extension)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.extension}
                 placeholder="EXTENSION"
@@ -255,7 +255,7 @@ const TraineeProfile: React.FC = () => {
           </IonRow>
 
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.barangay}
                 placeholder="BARANGAY"
@@ -264,7 +264,7 @@ const TraineeProfile: React.FC = () => {
                 onKeyDown={e=>handleEnter(e,inputRefs.city)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.city}
                 placeholder="CITY"
@@ -273,7 +273,7 @@ const TraineeProfile: React.FC = () => {
                 onKeyDown={e=>handleEnter(e,inputRefs.province)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.province}
                 placeholder="PROVINCE"
@@ -284,7 +284,7 @@ const TraineeProfile: React.FC = () => {
           </IonRow>
 
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.email}
                 placeholder="EMAIL / FACEBOOK"
@@ -292,7 +292,7 @@ const TraineeProfile: React.FC = () => {
                 onIonChange={e=>handleChange('email',e.detail.value)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 ref={inputRefs.contact}
                 type="number"
@@ -309,7 +309,7 @@ const TraineeProfile: React.FC = () => {
 
         <IonGrid>
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonSelect
                 placeholder="SEX"
                 value={formData.gender}
@@ -320,7 +320,7 @@ const TraineeProfile: React.FC = () => {
               </IonSelect>
             </IonCol>
 
-            <IonCol>
+            <IonCol size="3">
               <IonSelect
                 placeholder="CIVIL STATUS"
                 value={formData.civil_status}
@@ -334,7 +334,7 @@ const TraineeProfile: React.FC = () => {
               </IonSelect>
             </IonCol>
 
-            <IonCol>
+            <IonCol size="3">
               <IonSelect
                 placeholder="EMPLOYMENT"
                 value={formData.employment}
@@ -349,7 +349,7 @@ const TraineeProfile: React.FC = () => {
           </IonRow>
 
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonSelect
                 placeholder="BIRTHMONTH"
                 value={formData.birth_month}
@@ -359,7 +359,7 @@ const TraineeProfile: React.FC = () => {
               </IonSelect>
             </IonCol>
 
-            <IonCol>
+            <IonCol size="3">
               <IonSelect
                 placeholder="BRITHDAY"
                 value={formData.birth_day}
@@ -369,7 +369,7 @@ const TraineeProfile: React.FC = () => {
               </IonSelect>
             </IonCol>
 
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 type="number"
                 placeholder="BIRTHYEAR"
@@ -378,7 +378,7 @@ const TraineeProfile: React.FC = () => {
               />
             </IonCol>
 
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 type="number"
                 placeholder="AGE"
@@ -389,14 +389,14 @@ const TraineeProfile: React.FC = () => {
           </IonRow>
 
           <IonRow>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 placeholder="BIRTHPLACE CITY"
                 value={formData.birthplace_city}
                 onIonChange={e=>handleChange('birthplace_city', e.detail.value)}
               />
             </IonCol>
-            <IonCol>
+            <IonCol size="3">
               <IonInput
                 placeholder="BIRTHPLACE PROVINCE"
                 value={formData.birthplace_province}
@@ -407,7 +407,7 @@ const TraineeProfile: React.FC = () => {
         </IonGrid>
 
         <IonRow>
-  <IonCol>
+  <IonCol size="3">
     <IonSelect
       placeholder="EDUCATIONAL ATTAINMENT"
       value={formData.educational_attainment}

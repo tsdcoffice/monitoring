@@ -68,6 +68,7 @@ interface Trainee {
   year_enrolled: number;
 
   created_at: string;
+  status: string;
 }
 
 interface TrainingType {
@@ -446,6 +447,8 @@ if (selectedYear) {
 }, [selectedYear, trainingTypes]);
 
  const TraineeTable: React.FC = () => {
+
+  
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
@@ -1161,6 +1164,22 @@ new Paragraph(" "),
   setShowDownload(false);
 };
 
+  const handleDelete = async (id: string) => {
+  const confirmDelete = window.confirm("Are you sure you want to delete?");
+  if (!confirmDelete) return;
+
+  const { error } = await supabase
+    .from('trainees')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert("Delete failed: " + error.message);
+  } else {
+    setTrainees(prev => prev.filter(t => t.id !== id));
+  }
+};
+
   return (
     <IonPage>
 
@@ -1513,7 +1532,8 @@ borderRadius:"6px"
               <IonCol style={{ ...tableHeaderStyle, width: '100px', flex: 'none' }}>Batch</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '150px', flex: 'none' }}>Scholarship</IonCol>
               <IonCol style={{ ...tableHeaderStyle, width: '100px', flex: 'none' }}>Year</IonCol>
-              <IonCol style={{ ...tableHeaderStyle, width: '120px', flex: 'none' }}>Date Added</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '150px', flex: 'none' }}>Status</IonCol>
+              <IonCol style={{ ...tableHeaderStyle, width: '180px', flex: 'none' }}>Action</IonCol>
             </IonRow>
 
             {/* DATA ROWS */}
@@ -1553,9 +1573,43 @@ borderRadius:"6px"
                   {t.scholarship === "Other" ? t.scholarship_other : t.scholarship}
                 </IonCol>
                 <IonCol style={{ ...tableCellStyle, width: '100px', flex: 'none' }}>{t.year_enrolled}</IonCol>
-                <IonCol style={{ ...tableCellStyle, width: '120px', flex: 'none' }}>
-                  {new Date(t.created_at).toLocaleDateString()}
-                </IonCol>
+                <IonCol style={{ ...tableCellStyle, width: '150px', flex: 'none' }}>
+  <span style={{
+    padding: '4px 10px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    background:
+      t.status === 'COMPLETED' ? '#2dd36f' :
+      t.status === 'DROPOUT' ? '#eb445a' :
+      '#ffc409',
+    color: '#fff'
+  }}>
+    {t.status || 'ENROLLED'}
+  </span>
+</IonCol>
+
+
+<IonCol style={{ ...tableCellStyle, width: '180px', flex: 'none' }}>
+  <IonButton
+    size="small"
+    color="primary"
+    onClick={() => history.push(`/update-trainee/${t.id}`)}
+    style={{ marginRight: '5px' }}
+  >
+    Update
+  </IonButton>
+
+  <IonButton
+    size="small"
+    color="danger"
+    onClick={() => handleDelete(t.id)}
+  >
+    Delete
+  </IonButton>
+</IonCol>
+
+
               </IonRow>
             ))}
           </IonGrid>
