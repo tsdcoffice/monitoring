@@ -997,183 +997,227 @@ if (selectedYear) {
 
 
    const downloadExcel = () => {
+  let data;
 
-let data;
-
-if (selectedYear) {
-
-  data = yearSummary.map((t, index) => ({
-    "No.": index + 1,
-    "Training Type": t.training,
-    "Total Batches": t.batches,
-    "Total Trainees": t.trainees
-  }));
-
-} else {
-
-  data = trainees.map((t, index) => {
-
-    const typeName =
-      trainingTypes.find(tt => tt.id === t.course)?.name || "";
-
-    return {
+  if (selectedYear && isReportMode) {
+    data = yearSummary.map((t, index) => ({
       "No.": index + 1,
-      Barangay: t.barangay,
-      Name: `${t.lastname}, ${t.firstname} ${t.middlename || ""}`,
-      Gender: t.gender,
-      Education: t.educational_attainment,
-      Date: new Date(t.created_at).toLocaleDateString(),
-      "Training Type":
-        (!batch && !selectedBatchFilter)
-          ? `${typeName} (Batch ${t.batch})`
-          : typeName
-    };
-  });
+      "Training Type": t.training,
+      "Total Batches": t.batches,
+      "Total Trainees": t.trainees
+    }));
+  } else {
+    data = trainees.map((t, index) => ({
+      "No.": index + 1,
+      "Lastname": t.lastname,
+      "Firstname": t.firstname,
+      "Middlename": t.middlename || "-",
+      "Ext": t.extension || "-",
+      "Barangay": t.barangay,
+      "City": t.city,
+      "Province": t.province,
+      "Contact": t.contact,
+      "Email": t.email,
+      "Gender": t.gender,
+      "Civil Status": t.civil_status,
+      "Employment": t.employment,
+      "Birthdate": `${t.birth_month} ${t.birth_day}, ${t.birth_year}`,
+      "Age": t.age,
+      "Birthplace": `${t.birthplace_city}, ${t.birthplace_province}`,
+      "Education": t.educational_attainment,
+      "Classification": Array.isArray(t.classification) ? t.classification.join(", ") : t.classification || "-",
+      "Disability": t.disability === "Other" ? t.disability_other || "Other" : t.disability || "-",
+      "Course": t.course,
+      "Batch": t.batch,
+      "Scholarship": t.scholarship === "Other" ? t.scholarship_other : t.scholarship,
+      "Year": t.year_enrolled,
+      "Status": t.status || "ENROLLED"
+    }));
+  }
+const hasBatchSection = !!(slug && slug !== 'all' && batch);
 
-}
+  const headerRow = (selectedYear && isReportMode)
+    ? ["No.", "Training Type", "Total Batches", "Total Trainees"]
+    : [
+        "No.", "Lastname", "Firstname", "Middlename", "Ext",
+        "Barangay", "City", "Province", "Contact", "Email",
+        "Gender", "Civil Status", "Employment", "Birthdate", "Age",
+        "Birthplace", "Education", "Classification", "Disability",
+        "Course", "Batch", "Scholarship", "Year", "Status"
+      ];
 
- const worksheet = XLSX.utils.json_to_sheet([]);
+  const worksheet = XLSX.utils.json_to_sheet([]);
+  const lastCol = headerRow.length - 1;
 
-// Add title + batch details
-XLSX.utils.sheet_add_aoa(
-  worksheet,
-  [
-    [reportTitle],
+  // ── Top rows (title, generated, optional batch details) ──────────────
+  const topRows: any[][] = [
+    [(selectedYear && isReportMode) ? reportTitle : "TSDC Trainee List"],
     [`Generated: ${new Date().toLocaleDateString()}`],
     [],
-    
-    ...(batchDetails ? [
-  [
-    `Batch: ${batchDetails.batch}`,
-    "",
-    `Start Date: ${batchDetails.start_date}`,
-    "",
-    "",
-    `End Date: ${batchDetails.end_date}`
-  ],
-  [
-    `Duration: ${batchDetails.duration_hours} hrs`,
-    "",
-    `Trainor: ${batchDetails.trainor}`,
-    "",
-    "",
-    `Venue: ${batchDetails.venue}`
-  ],
-  []
-] : [])
-  ],
-  { origin: "A1" }
-);
+    ...(hasBatchSection ? (() => {
+      const third = Math.floor((lastCol + 1) / 3);
+      const row3: any[] = new Array(lastCol + 1).fill("");
+      row3[0] = `Batch: ${batch}`;
+      row3[third] = `Start Date: ${batchDetails?.start_date || ""}`;
+      row3[third * 2] = `End Date: ${batchDetails?.end_date || ""}`;
 
-worksheet["!merges"] = [
+      const row4: any[] = new Array(lastCol + 1).fill("");
+      row4[0] = `Duration: ${batchDetails?.duration_hours ? batchDetails.duration_hours + " hrs" : ""}`;
+      row4[third] = `Trainor: ${batchDetails?.trainor || ""}`;
+      row4[third * 2] = `Venue: ${batchDetails?.venue || ""}`;
 
-  // TITLE
-  { s:{r:0,c:0}, e:{r:0,c:7} },
+      return [row3, row4, []];
+    })() : [])
+  ];
 
-  // GENERATED
-  { s:{r:1,c:0}, e:{r:1,c:7} },
+  XLSX.utils.sheet_add_aoa(worksheet, topRows, { origin: "A1" });
 
-  // BATCH / START / END
-  { s:{r:3,c:0}, e:{r:3,c:1} },
-  { s:{r:3,c:2}, e:{r:3,c:4} },
-  { s:{r:3,c:5}, e:{r:3,c:7} },
+  // ── Dynamic row positioning ───────────────────────────────────────────
+  // Without batchDetails: title(0), generated(1), empty(2) → header at row 3
+  // With batchDetails:    + batch(3), duration(4), empty(5) → header at row 6
+  const headerRowIndex = hasBatchSection ? 6 : 3;
 
-  // DURATION / TRAINOR / VENUE
-  { s:{r:4,c:0}, e:{r:4,c:1} },
-  { s:{r:4,c:2}, e:{r:4,c:4} },
-  { s:{r:4,c:5}, e:{r:4,c:7} }
-
-];
-
-worksheet["A1"].s = {
-  font:{ bold:true, sz:16 },
-  alignment:{ horizontal:"center", vertical:"center" }
-};
-
-worksheet["A2"].s = {
-  alignment:{ horizontal:"center", vertical:"center" }
-};
-
-// Header row
-const headerRow = selectedYear
-  ? ["No.", "Training Type", "Total Batches", "Total Trainees"]
-  : ["No.", "Barangay", "Name", "Gender", "Education", "IP", "Date", "Training Type"];
-
-XLSX.utils.sheet_add_aoa(
-  worksheet,
-  [headerRow],
-  { origin: "A6" }
-);
-
-// Add data rows
-XLSX.utils.sheet_add_json(
-  worksheet,
-  data,
-  { origin: "A7", skipHeader: true }
-);
-
-// 2 add totals AFTER
-if (selectedYear) {
+  // ── Header row ────────────────────────────────────────────────────────
   XLSX.utils.sheet_add_aoa(
     worksheet,
-    [
+    [headerRow],
+    { origin: XLSX.utils.encode_cell({ r: headerRowIndex, c: 0 }) }
+  );
+
+  // ── Data rows ─────────────────────────────────────────────────────────
+  const dataRows = data.map(row => Object.values(row));
+  XLSX.utils.sheet_add_aoa(
+    worksheet,
+    dataRows,
+    { origin: XLSX.utils.encode_cell({ r: headerRowIndex + 1, c: 0 }) }
+  );
+
+  // ── Totals (year summary only) ────────────────────────────────────────
+  if (selectedYear && isReportMode) {
+    const totalStart = headerRowIndex + 1 + yearSummary.length + 1;
+    XLSX.utils.sheet_add_aoa(worksheet, [
       [],
       [`Overall Trainings: ${overallTrainings}`],
       [`Overall Batches: ${overallBatches}`],
       [`Overall Trainees: ${overallTrainees}`]
-    ],
-    { origin: -1 }
-  );
-}
+    ], { origin: XLSX.utils.encode_cell({ r: totalStart, c: 0 }) });
+  }
 
-// Style header cells
-const headerStyle = {
-  fill: { fgColor: { rgb: "10377A" } },
-  font: { bold: true, color: { rgb: "FFFFFF" } },
-  alignment: { horizontal: "center", vertical: "center" }
-};
+  // ── Merges ────────────────────────────────────────────────────────────
+  const merges: any[] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } }, // title
+    { s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } }, // generated
+  ];
 
-for (let C = 0; C < headerRow.length; C++) {
-  const cellAddress = XLSX.utils.encode_cell({ r: 5, c: C }); // row 10
-  if (!worksheet[cellAddress]) continue;
-  worksheet[cellAddress].s = headerStyle;
-}
+  if (hasBatchSection) {
+    const third = Math.floor((lastCol + 1) / 3);
+    const col1End = third - 1;
+    const col2Start = third;
+    const col2End = third * 2 - 1;
+    const col3Start = third * 2;
 
-// Auto column width
-worksheet["!cols"] = selectedYear
-  ? [
-      { wch: 5 },
-      { wch: 35 },
-      { wch: 20 },
-      { wch: 20 }
-    ]
-  : [
-      { wch: 5 },
-      { wch: 18 },
-      { wch: 30 },
-      { wch: 10 },
-      { wch: 20 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 30 }
-    ];
+    merges.push(
+      { s: { r: 3, c: 0 }, e: { r: 3, c: col1End } },
+      { s: { r: 3, c: col2Start }, e: { r: 3, c: col2End } },
+      { s: { r: 3, c: col3Start }, e: { r: 3, c: lastCol } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: col1End } },
+      { s: { r: 4, c: col2Start }, e: { r: 4, c: col2End } },
+      { s: { r: 4, c: col3Start }, e: { r: 4, c: lastCol } }
+    );
+  }
+
+  worksheet["!merges"] = merges;
+
+  // ── Cell styles ───────────────────────────────────────────────────────
+  if (worksheet["A1"]) {
+    worksheet["A1"].s = {
+      font: { bold: true, sz: 16 },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+  if (worksheet["A2"]) {
+    worksheet["A2"].s = {
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+  }
+
+  // Batch detail rows — centered
+  if (hasBatchSection) {
+    for (let R = 3; R <= 4; R++) {
+      for (let C = 0; C <= lastCol; C++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!worksheet[cellAddr]) continue;
+        worksheet[cellAddr].s = {
+          alignment: { horizontal: "center", vertical: "center" }
+        };
+      }
+    }
+  }
+
+  // Header row style
+  const headerStyle = {
+    fill: { fgColor: { rgb: "10377A" } },
+    font: { bold: true, color: { rgb: "FFFFFF" } },
+    alignment: { horizontal: "center", vertical: "center" }
+  };
+
+  for (let C = 0; C < headerRow.length; C++) {
+    const cellAddr = XLSX.utils.encode_cell({ r: headerRowIndex, c: C });
+    if (!worksheet[cellAddr]) continue;
+    worksheet[cellAddr].s = headerStyle;
+  }
+
+  // Data rows — centered
+  for (let R = headerRowIndex + 1; R < headerRowIndex + 1 + data.length; R++) {
+    for (let C = 0; C < headerRow.length; C++) {
+      const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!worksheet[cellAddr]) continue;
+      worksheet[cellAddr].s = {
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+    }
+  }
+
+  // ── Column widths ─────────────────────────────────────────────────────
+  worksheet["!cols"] = (selectedYear && isReportMode)
+    ? [{ wch: 5 }, { wch: 35 }, { wch: 20 }, { wch: 20 }]
+    : [
+        { wch: 5 },  // No.
+        { wch: 20 }, // Lastname
+        { wch: 20 }, // Firstname
+        { wch: 20 }, // Middlename
+        { wch: 8 },  // Ext
+        { wch: 20 }, // Barangay
+        { wch: 20 }, // City
+        { wch: 20 }, // Province
+        { wch: 15 }, // Contact
+        { wch: 28 }, // Email
+        { wch: 10 }, // Gender
+        { wch: 15 }, // Civil Status
+        { wch: 20 }, // Employment
+        { wch: 20 }, // Birthdate
+        { wch: 6 },  // Age
+        { wch: 25 }, // Birthplace
+        { wch: 30 }, // Education
+        { wch: 30 }, // Classification
+        { wch: 20 }, // Disability
+        { wch: 35 }, // Course
+        { wch: 8 },  // Batch
+        { wch: 20 }, // Scholarship
+        { wch: 8 },  // Year
+        { wch: 12 }, // Status
+      ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Trainees");
 
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array"
-  });
-
+  const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
 
   saveAs(
-  blob,
-  selectedYear
-    ? `tsdc_${selectedYear}_summary.xlsx`
-    : "tsdc_trainee_list.xlsx"
-);
+    blob,
+    (selectedYear && isReportMode) ? `tsdc_${selectedYear}_summary.xlsx` : "tsdc_trainee_list.xlsx"
+  );
 
   setShowDownload(false);
 };
