@@ -619,15 +619,15 @@ const { data } = await query;
 
     const { data } = await supabase
       .from("trainees")
-      .select("created_at");
+      .select("year_enrolled");
 
     if (!data) return;
 
     const years = Array.from(
       new Set(
-        data.map(t => new Date(t.created_at).getFullYear())
+        data.map((t: any) => t.year_enrolled).filter(Boolean)
       )
-    ).sort((a,b)=>b-a);
+    ).sort((a: any, b: any) => b - a);
 
     setAvailableYears(years.map(String));
 
@@ -646,14 +646,10 @@ const { data } = await query;
 
   const fetchYearSummary = async () => {
 
-    const start = `${selectedYear}-01-01`;
-    const end = `${selectedYear}-12-31`;
-
     const { data } = await supabase
       .from("trainees")
-      .select("course,batch,created_at")
-      .gte("created_at", start)
-      .lte("created_at", end);
+      .select("course,batch,year_enrolled")
+      .eq("year_enrolled", Number(selectedYear));
 
     if (!data) return;
 
@@ -1598,6 +1594,39 @@ new Paragraph(" "),
   </IonSelect>
 </IonItem>
 
+
+        {selectedTrainingType && (
+  <IonItem>
+    <IonLabel>Year</IonLabel>
+    <IonSelect
+      interface="alert"
+      value={selectedFilterYear}
+      onIonChange={(e) => setSelectedFilterYear(e.detail.value)}
+    >
+      <IonSelectOption value="">All</IonSelectOption>
+      {availableFilterYears.map(y => (
+        <IonSelectOption key={y} value={y}>{y}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
+
+{selectedTrainingType && selectedFilterYear && (
+  <IonItem>
+    <IonLabel>Batch</IonLabel>
+    <IonSelect
+      interface="alert"
+      value={selectedBatchFilter}
+      onIonChange={(e) => setSelectedBatchFilter(e.detail.value)}
+    >
+      <IonSelectOption value="">All</IonSelectOption>
+      {availableBatches.map(b => (
+        <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
+      ))}
+    </IonSelect>
+  </IonItem>
+)}
+
 <IonItem>
   <IonLabel>Scholarship</IonLabel>
   <IonSelect
@@ -1641,38 +1670,6 @@ new Paragraph(" "),
     ))}
   </IonSelect>
 </IonItem>
-
-        {selectedTrainingType && (
-  <IonItem>
-    <IonLabel>Year</IonLabel>
-    <IonSelect
-      interface="alert"
-      value={selectedFilterYear}
-      onIonChange={(e) => setSelectedFilterYear(e.detail.value)}
-    >
-      <IonSelectOption value="">All</IonSelectOption>
-      {availableFilterYears.map(y => (
-        <IonSelectOption key={y} value={y}>{y}</IonSelectOption>
-      ))}
-    </IonSelect>
-  </IonItem>
-)}
-
-{selectedTrainingType && selectedFilterYear && (
-  <IonItem>
-    <IonLabel>Batch</IonLabel>
-    <IonSelect
-      interface="alert"
-      value={selectedBatchFilter}
-      onIonChange={(e) => setSelectedBatchFilter(e.detail.value)}
-    >
-      <IonSelectOption value="">All</IonSelectOption>
-      {availableBatches.map(b => (
-        <IonSelectOption key={b} value={b}>{b}</IonSelectOption>
-      ))}
-    </IonSelect>
-  </IonItem>
-)}
       </>
     )}
 

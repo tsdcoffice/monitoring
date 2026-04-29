@@ -20,12 +20,12 @@ import {
   IonSearchbar,
   IonSelect,
   IonSelectOption,
-  useIonViewWillEnter
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { arrowBackOutline, search } from 'ionicons/icons';
+import { useIonViewWillEnter } from '@ionic/react';
 
 interface Course {
   name: string;
@@ -71,6 +71,10 @@ const Training: React.FC = () => {
   useEffect(() => {
   fetchCounts();
 }, [selectedYear]);
+
+useIonViewWillEnter(() => {
+  fetchCounts();
+});
 
 useEffect(() => {
   const fetchYears = async () => {
