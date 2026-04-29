@@ -138,16 +138,14 @@ const TraineeList: React.FC = () => {
   whiteSpace: 'nowrap'   // ✅ ADD THIS
 };
 
-  const { slug, batch } = useParams<{ slug: string, batch?: string }>();
+  const { slug, batch, year } = useParams<{ slug: string, batch?: string, year?: string; }>();
   const history = useHistory();
 
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const urlSearch = queryParams.get('query') || '';
-  const urlYear = queryParams.get('year') || '';
-  useEffect(() => {
-  setSelectedYear(urlYear);
-}, [urlYear]);
+  
+  
   const urlMode = queryParams.get('mode') || '';
 
   const [trainees, setTrainees] = useState<Trainee[]>([]);
@@ -158,7 +156,7 @@ const TraineeList: React.FC = () => {
   const [durationHours, setDurationHours] = useState<number | "">("");
   const [trainor, setTrainor] = useState("");
   const [venue, setVenue] = useState("");
-  const [selectedYear, setSelectedYear] = useState(urlYear);
+  const [selectedYear, setSelectedYear] = useState(year || '');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [yearSummary, setYearSummary] = useState<any[]>([]);
   const [availableTrainingTypes, setAvailableTrainingTypes] = useState<TrainingType[]>([]);
@@ -189,7 +187,7 @@ const overallTrainees = yearSummary.reduce(
   useEffect(() => {
   const params = new URLSearchParams(location.search);
 
-  if (selectedYear) {
+  if (isReportMode && selectedYear) {
     params.set('year', selectedYear);
   } else {
     params.delete('year');
@@ -222,6 +220,7 @@ useEffect(() => {
       .select('*')
       .eq('course', trainingName)
       .eq('batch', Number(batch))
+      .eq('year_enrolled', Number(year))
       .maybeSingle();
 
     if (error) {
@@ -333,8 +332,8 @@ useEffect(() => {
       
       // Filter by Batch (Priority: URL param, fallback to Filter state)
       const activeBatch = batch || selectedBatchFilter;
-      if (activeBatch) {
-        query = query.eq('batch', Number(activeBatch));
+      if (year) {
+        query = query.eq('year_enrolled', Number(year));
       }
     } else {
       // Logic para sa "All Trainees" page
@@ -1196,7 +1195,7 @@ new Paragraph(" "),
   }
 
   if (slug && batch) {
-    history.push(`/batch/${slug}?${params.toString()}`);
+  history.push(`/batch/${slug}`);
   } else {
     history.push(`/training?${params.toString()}`);
   }

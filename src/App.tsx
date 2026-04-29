@@ -68,6 +68,7 @@ const AppContent: React.FC<{ session: any }> = ({ session }) => {
         <Route exact path="/trainees/:slug"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
         <Route exact path="/trainees/:slug/:batch"> {session ? <TraineeList /> : <Redirect to="/login" />} </Route>
         <Route path="/history-logs" component={HistoryLogs} exact />
+        <Route path="/trainees/:slug/:batch/:year" component={TraineeList} exact />
 
         {/* Profiling children */}
         <Route exact path="/profiling/scholarship">  {session ? <StudentProfile /> : <Redirect to="/login" />} </Route>

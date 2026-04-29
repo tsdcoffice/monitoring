@@ -82,6 +82,7 @@ const selectedYear = queryParams.get("year");
 }, [slug, selectedYear])
 
 
+
 const fetchBatches = async () => {
 
   const trainingName = courseSlugMap[slug];
@@ -141,7 +142,7 @@ const fetchBatches = async () => {
 };
 
   const openBatch = (batch:number, year:number)=>{
-  history.push(`/trainees/${slug}/${batch}?year=${year}`)
+  history.push(`/trainees/${slug}/${batch}/${year}`)
 }
 
   return(
@@ -170,7 +171,7 @@ const fetchBatches = async () => {
 <IonGrid>
 <IonRow>
 
-{!selectedYear ? (
+{!selectedYear || selectedYear === "" ? (
 
   Object.entries(
     batches.reduce((acc: any, b) => {
@@ -203,16 +204,16 @@ const fetchBatches = async () => {
               }}
             >
               <IonCardHeader>
-                <IonCardTitle style={{ color: '#ffffff' }}>
+                <IonCardTitle style={{ color: '#ffffff', fontSize:"2rem", fontWeight:'bold' }}>
                   Batch {b.batch}
                 </IonCardTitle>
               </IonCardHeader>
 
               <IonCardContent>
-                <h1 style={{margin:0, fontSize:"2.5rem", fontWeight:'bold'}}>
+                <h1 style={{margin:0, fontSize:"2rem", fontWeight:'bold'}}>
                   {b.count}
                 </h1>
-                <p style={{margin:0}}>Trainees</p>
+                <p style={{margin:0, fontSize:"1rem"}}>Trainees</p>
               </IonCardContent>
             </IonCard>
           </IonCol>
@@ -249,7 +250,7 @@ const fetchBatches = async () => {
           <h1 style={{margin:0, fontSize:"2.5rem", fontWeight:'bold'}}>
             {b.count}
           </h1>
-          <p style={{margin:0}}>Trainees</p>
+          <p style={{margin:0, fontWeight:'bold'}}>Trainees</p>
         </IonCardContent>
       </IonCard>
     </IonCol>
