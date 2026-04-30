@@ -1762,10 +1762,10 @@ const saveBatchDetails = async () => {
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:'15px'}}>
           <div style={{display:'flex',gap:'8px'}}>
             <IonButton fill="clear" onClick={handlePrint}>
-              <IonIcon icon={printOutline}/>
+              <IonIcon icon={printOutline} style={{ fontSize: '28px' }}/>
             </IonButton>
             <IonButton fill="clear" onClick={() => setShowDownload(true)}>
-  <IonIcon icon={downloadOutline}/>
+  <IonIcon icon={downloadOutline} style={{ fontSize: '28px' }}/>
 </IonButton>
           </div>
 

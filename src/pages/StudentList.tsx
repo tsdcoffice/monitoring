@@ -725,71 +725,66 @@ const downloadExcel = () => {
   const generatedDate = new Date().toLocaleDateString();
   const reportTitle = typeQuery ? `${typeQuery.toUpperCase()} SCHOLARS` : "ALL SCHOLARS LIST";
 
-  const rows = [
-    // TABLE HEADER
-    new TableRow({
-      tableHeader: true,
-      children: [
-        "No.", "Barangay", "Last Name", "First Name", "Middle Name", "Suffix", "Gender", "School", "Course", "Year", "IP", "Type", "Status", "Remarks"
-      ].map(text => 
-        new TableCell({
-          shading: { fill: "10377A", type: ShadingType.CLEAR },
-          children: [new Paragraph({
-            text: text,
-            style: "whiteText", // Siguroha nga naay style para sa puti nga font
-          })]
-        })
-      )
-    }),
-
-    // DATA ROWS
-    ...filteredStudents.map((s, i) =>
-
-      new TableRow({
-        children: [
-          new TableCell({ width: { size: 800, type: WidthType.DXA }, children: [new Paragraph(String(i + 1))] }),
-          new TableCell({ width: { size: 2000, type: WidthType.DXA }, children: [new Paragraph(s.barangay)] }),
-          new TableCell({ width: { size: 2200, type: WidthType.DXA }, children: [new Paragraph(s.lastname)] }),
-          new TableCell({ width: { size: 2200, type: WidthType.DXA }, children: [new Paragraph(s.firstname)] }),
-          new TableCell({ width: { size: 2000, type: WidthType.DXA }, children: [new Paragraph(s.middlename || "-")] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.suffix || "-")] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.gender)] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.school)] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.course || "-")] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.year_level || "-")] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA },
-            children: s.is_ip ? [
-              new Paragraph({ text: "IP", alignment: AlignmentType.CENTER }),
-              new Paragraph({ 
-                text: `(${s.ip_group ? s.ip_group.charAt(0).toUpperCase() + s.ip_group.slice(1).toLowerCase() : "-"})`,
-                alignment: AlignmentType.CENTER
-              })
-            ] : [new Paragraph({ text: "Not IP", alignment: AlignmentType.CENTER })]
-          }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA }, children: [new Paragraph(s.scholarship_types?.name || "-")] }),
-          new TableCell({ width: { size: 1200, type: WidthType.DXA },
-  children: [
-    new Paragraph({
+  const hCell = (text: string) =>
+  new TableCell({
+    shading: { fill: "10377A", type: ShadingType.CLEAR },
+    children: [new Paragraph({
       alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 14 })]
+    })]
+  });
+
+const dCell = (text: string) =>
+  new TableCell({
+    children: [new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: String(text ?? "-"), size: 14 })]
+    })]
+  });
+
+const rows = [
+  new TableRow({
+    tableHeader: true,
+    children: [
+      hCell("No."), hCell("Barangay"), hCell("Last Name"), hCell("First Name"),
+      hCell("Middle"), hCell("Suffix"), hCell("Gender"), hCell("School"),
+      hCell("Course"), hCell("Year"), hCell("IP"), hCell("Type"),
+      hCell("Status"), hCell("Remarks")
+    ]
+  }),
+  ...filteredStudents.map((s, i) =>
+    new TableRow({
       children: [
-        new TextRun({
-          text: s.status || "On-going",
-          // Dinhi i-check ang status para sa kolor sa font
-          color: (s.status?.toLowerCase() === "graduated") ? "28A745" : // green
-                 (s.status?.toLowerCase() === "stopped") ? "FF0000" :   // red
-                 (s.status?.toLowerCase() === "on-going") ? "808080" :  // gray
-                 "000000", // Default: Itom
-          bold: true, // Mas maayo i-bold para klaro ang kolor inig print
+        dCell(String(i + 1)),
+        dCell(s.barangay),
+        dCell(s.lastname),
+        dCell(s.firstname),
+        dCell(s.middlename || "-"),
+        dCell(s.suffix || "-"),
+        dCell(s.gender),
+        dCell(s.school),
+        dCell(s.course || "-"),
+        dCell(s.year_level || "-"),
+        dCell(s.is_ip ? `IP (${s.ip_group || "-"})` : "Not IP"),
+        dCell(s.scholarship_types?.name || "-"),
+        new TableCell({
+          children: [new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({
+              text: s.status || "On-going",
+              size: 14,
+              bold: true,
+              color:
+                s.status === "Graduated" ? "28A745" :
+                s.status === "Stopped"   ? "FF0000" : "808080"
+            })]
+          })]
         }),
-      ],
-    }),
-  ],
-}),
-          new TableCell({ children: [new Paragraph(s.remarks || "-")] })
-        ]
-      })
-    )
-  ];
+        dCell(s.remarks || "-")
+      ]
+    })
+  )
+];
 
   const doc = new Document({
     sections: [{
@@ -835,12 +830,25 @@ const downloadExcel = () => {
 
         // 4. Main Table
         new Table({
-          rows,
-          width: {
-            size: 100,
-            type: "pct"
-          }
-        })
+  rows,
+  width: { size: 100, type: "pct" },
+  columnWidths: [
+    500,   // No.
+    1800,  // Barangay
+    1800,  // Last Name
+    1800,  // First Name
+    1800,  // Middle
+    800,   // Suffix
+    900,   // Gender
+    2800,  // School
+    2800,  // Course
+    900,   // Year
+    1000,  // IP
+    900,   // Type
+    1000,  // Status
+    1500,  // Remarks
+  ]
+})
       ]
     }]
   });
@@ -873,10 +881,10 @@ const downloadExcel = () => {
 
           <div>
             <IonButton fill="clear" onClick={handlePrint}>
-              <IonIcon icon={printOutline}/>
+              <IonIcon icon={printOutline} style={{ fontSize: '28px' }}/>
             </IonButton>
           <IonButton fill="clear" onClick={() => setShowDownload(true)}>
-  <IonIcon icon={downloadOutline}/>
+  <IonIcon icon={downloadOutline} style={{ fontSize: '28px' }}/>
 </IonButton>
           </div>
 
