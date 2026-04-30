@@ -753,71 +753,184 @@ const { data } = await query;
 
   /* PRINT */
 const handlePrint = () => {
-  if (!tableRef.current) return;
-
-  const printWindow = window.open('', '', 'width=900,height=700');
+  const printWindow = window.open('', '', 'width=1200,height=700');
   if (!printWindow) return;
 
-  // 1. Isuwat ang content (apil ang image)
+  const isAllTraineesPrint = !(slug && slug !== 'all' && batch);
+
+  const genderAbbrev = (g: string) => {
+    const v = (g || "").toLowerCase();
+    if (v === "male") return "M";
+    if (v === "female") return "F";
+    return g;
+  };
+
+  const civilAbbrev = (c: string) => {
+    const v = (c || "").toLowerCase();
+    if (v === "single") return "S";
+    if (v === "married") return "M";
+    if (v.includes("separated") || v.includes("divorced") || v.includes("annulled")) return "S/D/A";
+    if (v.includes("widow")) return "W";
+    if (v.includes("live")) return "Live-in";
+    return c;
+  };
+
+  const eduAbbrev = (edu: string): string => {
+    const e = (edu || "").toLowerCase();
+    if (e.includes("college") && !e.includes("under")) return "CG";
+    if (e.includes("college")) return "CU";
+    if ((e.includes("high school") || e.includes("highschool") || e.includes("secondary")) && !e.includes("under")) return "HG";
+    if (e.includes("high school") || e.includes("highschool") || e.includes("secondary")) return "HU";
+    if (e.includes("elementary") && !e.includes("under")) return "EG";
+    if (e.includes("elementary")) return "EU";
+    return edu;
+  };
+
+  const classAbbrev = (cls: string) => cls
+    .replace(/Indigenous People/gi, "IP")
+    .replace(/Person with Disability/gi, "PWD")
+    .replace(/Solo Parent/gi, "SP")
+    .replace(/Returning OFW/gi, "ROFW")
+    .replace(/Overseas Filipino Worker/gi, "OFW")
+    .replace(/Disadvantaged/gi, "Disadv.");
+
+  const monthNum = (m: string) => {
+    const months = ["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"];
+    const idx = months.findIndex(mo => mo.toLowerCase() === (m || "").toLowerCase());
+    return idx >= 0 ? String(idx + 1).padStart(2, "0") : m;
+  };
+
+  const printTitle = (slug && slug !== 'all' && batch)
+    ? `${courseSlugMap[slug] || slug.replace(/-/g, " ").toUpperCase()} Trainee List`
+    : reportTitle;
+
+  // Build table header and rows
+  let thead = '';
+  let tbody = '';
+
+  if (isAllTraineesPrint) {
+    thead = `
+      <tr>
+        <th>Lastname</th><th>Firstname</th><th>Middlename</th>
+        <th>Gender</th><th>Civil Status</th><th>Barangay</th>
+        <th>City</th><th>Province</th><th>Contact No.</th>
+        <th>Date of Birth</th><th>Educ.</th><th>Classification</th>
+        <th>Course</th><th>Batch</th><th>Year</th><th>Status</th>
+      </tr>`;
+
+    tbody = trainees.map(t => {
+      const dob = `${monthNum(t.birth_month)}/${String(t.birth_day).padStart(2,"0")}/${t.birth_year}`;
+      const cls = Array.isArray(t.classification)
+        ? t.classification.map(classAbbrev).join(", ")
+        : classAbbrev(t.classification || "-");
+      return `<tr>
+        <td>${t.lastname}</td>
+        <td>${t.firstname}</td>
+        <td>${t.middlename || "-"}</td>
+        <td>${genderAbbrev(t.gender)}</td>
+        <td>${civilAbbrev(t.civil_status)}</td>
+        <td>${t.barangay}</td>
+        <td>${t.city}</td>
+        <td>${t.province}</td>
+        <td>${t.contact}</td>
+        <td>${dob}</td>
+        <td>${eduAbbrev(t.educational_attainment)}</td>
+        <td>${cls}</td>
+        <td>${t.course}</td>
+        <td>${t.batch}</td>
+        <td>${t.year_enrolled}</td>
+        <td>${t.status || "ENROLLED"}</td>
+      </tr>`;
+    }).join('');
+
+  } else {
+    // Batch mode — 14 columns, no Course, no Batch
+    thead = `
+      <tr>
+        <th>Lastname</th><th>Firstname</th><th>Middlename</th>
+        <th>Gender</th><th>Civil Status</th><th>Barangay</th>
+        <th>City</th><th>Province</th><th>Contact No.</th>
+        <th>Date of Birth</th><th>Educ.</th><th>Classification</th>
+        <th>Year</th><th>Status</th>
+      </tr>`;
+
+    tbody = trainees.map((t) => {
+      const dob = `${monthNum(t.birth_month)}/${String(t.birth_day).padStart(2,"0")}/${t.birth_year}`;
+      const cls = Array.isArray(t.classification)
+        ? t.classification.map(classAbbrev).join(", ")
+        : classAbbrev(t.classification || "-");
+      return `<tr>
+        <td>${t.lastname}</td>
+        <td>${t.firstname}</td>
+        <td>${t.middlename || "-"}</td>
+        <td>${genderAbbrev(t.gender)}</td>
+        <td>${civilAbbrev(t.civil_status)}</td>
+        <td>${t.barangay}</td>
+        <td>${t.city}</td>
+        <td>${t.province}</td>
+        <td>${t.contact}</td>
+        <td>${dob}</td>
+        <td>${eduAbbrev(t.educational_attainment)}</td>
+        <td>${cls}</td>
+        <td>${t.year_enrolled}</td>
+        <td>${t.status || "ENROLLED"}</td>
+      </tr>`;
+    }).join('');
+  }
+
   printWindow.document.write(`
     <html>
       <head>
-        <title>TSDC Trainee List</title>
+        <title>${printTitle}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { text-align:center; margin-top:10px; }
-          .generated { text-align:center; font-size:12px; margin-bottom:15px; }
-          table { width:100%; border-collapse:collapse; }
-          th, td { border:1px solid #333; padding:6px; font-size:12px; text-align:center; }
-          th { background:#10377a; color:white; }
+          @page { size: A4 landscape; margin: 13mm; }
+          body { font-family: Arial, sans-serif; padding: 0; margin: 0; }
+          h2 { text-align: center; margin: 8px 0 4px 0; font-size: 14px; }
+          .generated { text-align: center; font-size: 10px; margin-bottom: 10px; }
+          .batch-info { font-size: 10px; margin-bottom: 10px; }
+          .batch-info table { border: none; width: 100%; }
+          .batch-info td { border: none !important; padding: 2px 6px; font-size: 10px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #333; padding: 4px 3px; font-size: 8px; text-align: center; }
+          th { background: #10377a; color: white; }
+          tr:nth-child(even) { background: #f5f5f5; }
+          img { display: block; margin: 0 auto; max-height: 80px; object-fit: contain; }
         </style>
       </head>
       <body>
-        <img id="print-header" src="${headerImg}" style="width:100%; max-height:120px; object-fit:contain;" />
-        <h2>${reportTitle}</h2>
+        <img id="print-header" src="${headerImg}" style="width:auto; max-width:100%; max-height:80px;" />
+        <h2>${printTitle}</h2>
+        <div class="generated">Generated: ${new Date().toLocaleDateString()}</div>
 
-<div class="generated" style="margin-bottom:15px;">
-Generated: ${new Date().toLocaleDateString()}
-</div>
+        ${batchDetails ? `
+        <div class="batch-info">
+          <table>
+            <tr>
+              <td><b>Batch:</b> ${batchDetails.batch}</td>
+              <td><b>Start Date:</b> ${batchDetails.start_date}</td>
+              <td><b>End Date:</b> ${batchDetails.end_date}</td>
+            </tr>
+            <tr>
+              <td><b>Duration:</b> ${batchDetails.duration_hours} hrs</td>
+              <td><b>Trainor:</b> ${batchDetails.trainor}</td>
+              <td><b>Venue:</b> ${batchDetails.venue}</td>
+            </tr>
+          </table>
+        </div>
+        ` : ""}
 
-${batchDetails ? `
-<div style="margin-bottom:15px;font-size:12px">
+        <table>
+          <thead>${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
 
-<div style="display:flex;">
-<div style="width:33%"><b>Batch:</b> ${batchDetails.batch}</div>
-<div style="width:33%"><b>Start Date:</b> ${batchDetails.start_date}</div>
-<div style="width:33%"><b>End Date:</b> ${batchDetails.end_date}</div>
-</div>
-
-<div style="display:flex;margin-top:5px;">
-<div style="width:33%"><b>Duration:</b> ${batchDetails.duration_hours} hrs</div>
-<div style="width:33%"><b>Trainor:</b> ${batchDetails.trainor}</div>
-<div style="width:33%"><b>Venue:</b> ${batchDetails.venue}</div>
-</div>
-
-</div>
-` : ""}
-
-<table>
-  ${generateTableRows()}
-</table>
-
-    <div style="
-  margin-top:20px;
-  padding-top:10px;
-  border-top:2px solid #000;
-  font-weight:bold;
-">
-
-<!-- ✅ MOVE TOTALS HERE -->
-${selectedYear ? `
-<div style="margin-top:20px;font-weight:bold">
-Overall Trainings: ${overallTrainings}<br>
-Overall Batches: ${overallBatches}<br>
-Overall Trainees: ${overallTrainees.toLocaleString()}
-</div>
-` : ""}
-
+        ${(selectedYear && !batch) ? `
+        <div style="margin-top:15px; font-weight:bold; font-size:11px;">
+          Overall Trainings: ${overallTrainings}<br>
+          Overall Batches: ${overallBatches}<br>
+          Overall Trainees: ${overallTrainees.toLocaleString()}
+        </div>` : ""}
       </body>
     </html>
   `);
@@ -825,40 +938,36 @@ Overall Trainees: ${overallTrainees.toLocaleString()}
   printWindow.document.close();
   printWindow.focus();
 
-  // 2. KINI ANG IMPORTANTE:
-  // Maghulat ta nga ma-load ang image sa dili pa i-print
   const header = printWindow.document.getElementById('print-header') as HTMLImageElement;
-  
   if (header) {
-    header.onload = () => {
-      printWindow.print();
-      // printWindow.close(); // Optional: i-close ang window after print/cancel
-    };
-
-    // Para sa mga browser nga paspas kaayo o naka-cache na ang image
-    if (header.complete) {
-      header.onload(new Event('load'));
-    }
+    header.onload = () => { printWindow.print(); };
+    if (header.complete) { header.onload(new Event('load')); }
   } else {
-    // Backup kung pananglitan naay error sa image
     printWindow.print();
   }
 };
 
   /* PDF DOWNLOAD */
 const handleDownloadPDF = () => {
-  const pdf = new jsPDF('p', 'mm', 'a4');
+  const isBatchPdf = !!(slug && slug !== 'all' && batch);
+const pdf = new jsPDF((selectedYear && !isBatchPdf) ? 'p' : 'l', 'mm', 'a4');
 
   const img = new Image();
   img.src = headerImg;
 
-pdf.addImage(img, "PNG", 10, 5, 190, 30);
+const pageWidth = pdf.internal.pageSize.getWidth();
+const imgWidth = 190;
+const imgX = (pageWidth - imgWidth) / 2;
+pdf.addImage(img, "PNG", imgX, 5, imgWidth, 30);
 
-  pdf.setFontSize(16);
-pdf.text(reportTitle, 105, 40, { align: 'center' });
+const pdfTitle = (slug && slug !== 'all' && batch)
+  ? `${courseSlugMap[slug] || slug.replace(/-/g, " ").toUpperCase()} Trainee List`
+  : reportTitle;
+pdf.setFontSize(16);
+pdf.text(pdfTitle, pageWidth / 2, 40, { align: 'center' });
 
 pdf.setFontSize(10);
-pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 46, { align: 'center' });
+pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 46, { align: 'center' });
 let startY = 60;
 
 if(batchDetails){
@@ -900,7 +1009,7 @@ startY = (pdf as any).lastAutoTable.finalY + 5;
   let tableColumn;
 let tableRows;
 
- if (selectedYear) {
+ if (selectedYear && !isBatchPdf) {
 
   tableColumn = [
     "No.",
@@ -918,38 +1027,102 @@ let tableRows;
 
 } else {
 
-  tableColumn = [
-    "No.",
-    "Barangay",
-    "Name",
-    "Gender",
-    "Education",
-    "IP",
-    "Date",
-    "Training Type"
-  ];
+  const genderAbbrev = (g: string) => {
+    const v = (g || "").toLowerCase();
+    if (v === "male") return "M";
+    if (v === "female") return "F";
+    return g;
+  };
 
-  tableRows = trainees.map((t, index) => {
+  const civilAbbrev = (c: string) => {
+    const v = (c || "").toLowerCase();
+    if (v === "single") return "S";
+    if (v === "married") return "M";
+    if (v.includes("separated") || v.includes("divorced") || v.includes("annulled")) return "S/D/A";
+    if (v.includes("widow")) return "W";
+    if (v.includes("live")) return "Live-in";
+    return c;
+  };
 
-    const typeName =
-      trainingTypes.find(tt => tt.id === t.course)?.name || "";
+  const eduAbbrevPdf = (edu: string): string => {
+    const e = (edu || "").toLowerCase();
+    if (e.includes("college") && !e.includes("under")) return "CG";
+    if (e.includes("college")) return "CU";
+    if ((e.includes("high school") || e.includes("highschool") || e.includes("secondary")) && !e.includes("under")) return "HG";
+    if (e.includes("high school") || e.includes("highschool") || e.includes("secondary")) return "HU";
+    if (e.includes("elementary") && !e.includes("under")) return "EG";
+    if (e.includes("elementary")) return "EU";
+    return edu;
+  };
 
-    const trainingDisplay =
-      (!batch && !selectedBatchFilter)
-        ? `${typeName} (Batch ${t.batch})`
-        : typeName;
+  const classAbbrev = (cls: string) => cls
+    .replace(/Indigenous People/gi, "IP")
+    .replace(/Person with Disability/gi, "PWD")
+    .replace(/Solo Parent/gi, "SP")
+    .replace(/Returning OFW/gi, "ROFW")
+    .replace(/Overseas Filipino Worker/gi, "OFW")
+    .replace(/Disadvantaged/gi, "Disadv.");
 
-  
+  const monthNum = (m: string) => {
+    const months = ["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"];
+    const idx = months.findIndex(mo => mo.toLowerCase() === (m || "").toLowerCase());
+    return idx >= 0 ? String(idx + 1).padStart(2, "0") : m;
+  };
 
-    return [
-      index + 1,
-      t.barangay,
-      `${t.lastname}, ${t.firstname} ${t.middlename || ''}`,
-      t.gender,
-      t.educational_attainment,
-      new Date(t.created_at).toLocaleDateString(),
-      trainingDisplay
-    ];
+  tableColumn = isBatchPdf
+    ? [
+        "Lastname", "Firstname", "Middlename", "Gender", "Civil Status",
+        "Barangay", "City", "Province", "Contact No.", "Date of Birth",
+        "Educ.", "Classification", "Year", "Status"
+      ]
+    : [
+        "Lastname", "Firstname", "Middlename", "Gender", "Civil Status",
+        "Barangay", "City", "Province", "Contact No.", "Date of Birth",
+        "Educ.", "Classification", "Course", "Batch", "Year", "Status"
+      ];
+
+  tableRows = trainees.map((t) => {
+    const dob = `${monthNum(t.birth_month)}/${String(t.birth_day).padStart(2,"0")}/${t.birth_year}`;
+    const cls = Array.isArray(t.classification)
+      ? t.classification.map(classAbbrev).join(", ")
+      : classAbbrev(t.classification || "-");
+
+    return isBatchPdf
+      ? [
+          t.lastname,
+          t.firstname,
+          t.middlename || "-",
+          genderAbbrev(t.gender),
+          civilAbbrev(t.civil_status),
+          t.barangay,
+          t.city,
+          t.province,
+          t.contact,
+          dob,
+          eduAbbrevPdf(t.educational_attainment),
+          cls,
+          t.year_enrolled,
+          t.status || "ENROLLED"
+        ]
+      : [
+          t.lastname,
+          t.firstname,
+          t.middlename || "-",
+          genderAbbrev(t.gender),
+          civilAbbrev(t.civil_status),
+          t.barangay,
+          t.city,
+          t.province,
+          t.contact,
+          dob,
+          eduAbbrevPdf(t.educational_attainment),
+          cls,
+          t.course,
+          t.batch,
+          t.year_enrolled,
+          t.status || "ENROLLED"
+        ];
   });
 
 }
@@ -982,14 +1155,14 @@ let tableRows;
 
     const finalY = (pdf as any).lastAutoTable.finalY;
 
-if (selectedYear) {
+if (selectedYear && !isBatchPdf) {
   pdf.text(`Overall Trainings: ${overallTrainings}`, 20, finalY + 10);
   pdf.text(`Overall Batches: ${overallBatches}`, 20, finalY + 18);
   pdf.text(`Overall Trainees: ${overallTrainees.toLocaleString()}`, 20, finalY + 26);
 }
 
   pdf.save(
-  selectedYear
+  (selectedYear && !isBatchPdf)
     ? `tsdc_${selectedYear}_summary.pdf`
     : "tsdc_trainee_list.pdf"
 ); };
