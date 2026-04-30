@@ -12,7 +12,7 @@ import { supabase } from '../supabaseClient';
 
 import { jsPDF } from 'jspdf';
 import * as XLSX from "xlsx-js-style";
-import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType } from "docx";
+import {  Document, Packer, Paragraph, Table, TableRow, TableCell, ImageRun, AlignmentType, HeadingLevel, ShadingType, PageOrientation, convertMillimetersToTwip } from "docx";
 import { saveAs } from "file-saver";
 import headerImg from "../pics/header.png";
 import { TextRun } from "docx";
@@ -1276,175 +1276,261 @@ const saveBatchDetails = async () => {
 };
 
   const downloadWord = async () => {
-    const generatedDate = new Date().toLocaleDateString();
+  const generatedDate = new Date().toLocaleDateString();
+  const hasBatchSection = !!(slug && slug !== 'all' && batch);
+  const isYearReport = !!(selectedYear && isReportMode);
+  const isAllTrainees = !hasBatchSection && !isYearReport;
 
-  const rows = [
+  // Educational attainment abbreviation
+  const eduAbbrev = (edu: string): string => {
+    const e = (edu || "").toLowerCase();
+    if (e.includes("college") && !e.includes("under")) return "CG";
+    if (e.includes("college")) return "CU";
+    if ((e.includes("high school") || e.includes("highschool") || e.includes("secondary")) && !e.includes("under")) return "HG";
+    if (e.includes("high school") || e.includes("highschool") || e.includes("secondary")) return "HU";
+    if (e.includes("elementary") && !e.includes("under")) return "EG";
+    if (e.includes("elementary")) return "EU";
+    return edu;
+  };
 
-    new TableRow({
-  tableHeader: true,
-  children: selectedYear
-    ? [
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("No.")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Training Type")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Total Batches")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Total Trainees")] })
-      ]
-    : [
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("No.")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Barangay")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Name")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Gender")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Education")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("IP")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Date")] }),
-        new TableCell({ shading:{ fill:"10377A", type:ShadingType.CLEAR }, children:[new Paragraph("Training Type")] })
-      ]
-}),
+  // Cell helpers for All Trainees mode (small font to fit landscape)
+  const hCell = (text: string) =>
+    new TableCell({
+      shading: { fill: "10377A", type: ShadingType.CLEAR },
+      children: [new Paragraph({
+        children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 14 })]
+      })]
+    });
 
-...selectedYear
-  ? yearSummary.map((t,index)=> new TableRow({
-      children:[
-        new TableCell({children:[new Paragraph(String(index+1))]}),
-        new TableCell({children:[new Paragraph(t.training)]}),
-        new TableCell({children:[new Paragraph(String(t.batches))]}),
-        new TableCell({children:[new Paragraph(String(t.trainees))]})
-      ]
-    }))
-  : trainees.map((t,index)=> {
-  const typeName = trainingTypes.find(tt => tt.id === t.course)?.name || "";
-  // I-append ang Batch No. kung wala'y filter
-  const trainingDisplay = (!batch && !selectedBatchFilter) ? `${typeName} (Batch ${t.batch})` : typeName;
+  const dCell = (text: string) =>
+    new TableCell({
+      children: [new Paragraph({
+        children: [new TextRun({ text: String(text ?? "-"), size: 14 })]
+      })]
+    });
 
+  // ── Build table rows based on mode ───────────────────────────────────
+  let rows: TableRow[];
 
-  return new TableRow({
-    children: [
-      new TableCell({children:[new Paragraph(String(index + 1))]}),
-      new TableCell({children:[new Paragraph(t.barangay)]}),
-      new TableCell({children:[new Paragraph(`${t.lastname}, ${t.firstname} ${t.middlename || ""}`)]}),
-      new TableCell({children:[new Paragraph(t.gender)]}),
-      new TableCell({children:[new Paragraph(t.educational_attainment)]}),
-      new TableCell({children:[new Paragraph(new Date(t.created_at).toLocaleDateString())]}),
-      new TableCell({children:[new Paragraph(trainingDisplay)]}) 
-    ]
-  });
-})
-  ];
+  if (isYearReport) {
+    // Year Summary mode
+    rows = [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          new TableCell({ shading: { fill: "10377A", type: ShadingType.CLEAR }, children: [new Paragraph("No.")] }),
+          new TableCell({ shading: { fill: "10377A", type: ShadingType.CLEAR }, children: [new Paragraph("Training Type")] }),
+          new TableCell({ shading: { fill: "10377A", type: ShadingType.CLEAR }, children: [new Paragraph("Total Batches")] }),
+          new TableCell({ shading: { fill: "10377A", type: ShadingType.CLEAR }, children: [new Paragraph("Total Trainees")] }),
+        ]
+      }),
+      ...yearSummary.map((t, index) => new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph(String(index + 1))] }),
+          new TableCell({ children: [new Paragraph(t.training)] }),
+          new TableCell({ children: [new Paragraph(String(t.batches))] }),
+          new TableCell({ children: [new Paragraph(String(t.trainees))] }),
+        ]
+      }))
+    ];
 
-const paragraphs = [
-  new Paragraph({ text: "Some header or title..." }),
-  // only add totals if YEAR is selected
-];
+  } else if (hasBatchSection) {
+    // Per-batch mode — same as All Trainees but without Batch and Course columns
+    rows = [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          hCell("Lastname"), hCell("Firstname"), hCell("Middlename"),
+          hCell("Gender"), hCell("Civil Status"), hCell("Barangay"),
+          hCell("City"), hCell("Province"), hCell("Contact"),
+          hCell("Date of Birth"), hCell("Edu."), hCell("Classification"),
+          hCell("Scholarship"), hCell("Year"), hCell("Status"),
+        ]
+      }),
+      ...trainees.map((t) => new TableRow({
+        children: [
+          dCell(t.lastname),
+          dCell(t.firstname),
+          dCell(t.middlename || "-"),
+          dCell(t.gender),
+          dCell(t.civil_status),
+          dCell(t.barangay),
+          dCell(t.city),
+          dCell(t.province),
+          dCell(t.contact),
+          dCell(`${t.birth_month} ${t.birth_day}, ${t.birth_year}`),
+          dCell(eduAbbrev(t.educational_attainment)),
+          dCell(Array.isArray(t.classification) ? t.classification.join(", ") : t.classification || "-"),
+          dCell(t.scholarship === "Other" ? t.scholarship_other || "Other" : t.scholarship || "-"),
+          dCell(String(t.year_enrolled)),
+          dCell(t.status || "ENROLLED"),
+        ]
+      }))
+    ];
 
-if (selectedYear) {
-  paragraphs.push(
-    new Paragraph({ text: `Overall Trainings: ${overallTrainings}` }),
-    new Paragraph({ text: `Overall Batches: ${overallBatches}` }),
-    new Paragraph({ text: `Overall Trainees: ${overallTrainees.toLocaleString()}` })
-  );
-}
+  } else {
+    // All Trainees mode — 17 columns, landscape, abbreviated education
+    rows = [
+      new TableRow({
+        tableHeader: true,
+        children: [
+          hCell("Lastname"), hCell("Firstname"), hCell("Middlename"),
+          hCell("Gender"), hCell("Civil Status"), hCell("Barangay"),
+          hCell("City"), hCell("Province"), hCell("Contact"),
+          hCell("Date of Birth"), hCell("Edu."), hCell("Classification"),
+          hCell("Course"), hCell("Batch"), hCell("Scholarship"),
+          hCell("Year"), hCell("Status"),
+        ]
+      }),
+      ...trainees.map((t) => new TableRow({
+        children: [
+          dCell(t.lastname),
+          dCell(t.firstname),
+          dCell(t.middlename || "-"),
+          dCell(t.gender),
+          dCell(t.civil_status),
+          dCell(t.barangay),
+          dCell(t.city),
+          dCell(t.province),
+          dCell(t.contact),
+          dCell(`${t.birth_month} ${t.birth_day}, ${t.birth_year}`),
+          dCell(eduAbbrev(t.educational_attainment)),
+          dCell(Array.isArray(t.classification) ? t.classification.join(", ") : t.classification || "-"),
+          dCell(t.course),
+          dCell(String(t.batch)),
+          dCell(t.scholarship === "Other" ? t.scholarship_other || "Other" : t.scholarship || "-"),
+          dCell(String(t.year_enrolled)),
+          dCell(t.status || "ENROLLED"),
+        ]
+      }))
+    ];
+  }
 
-  
+  // Landscape only for All Trainees mode
+  const margin = {
+    top: convertMillimetersToTwip(13),
+    bottom: convertMillimetersToTwip(13),
+    left: convertMillimetersToTwip(13),
+    right: convertMillimetersToTwip(13),
+  };
+
+  const sectionProps = (isAllTrainees || hasBatchSection) ? {
+    properties: {
+      page: {
+        size: { orientation: PageOrientation.LANDSCAPE },
+        margin
+      }
+    }
+  } : {
+    properties: {
+      page: { margin }
+    }
+  };
 
   const doc = new Document({
     sections: [{
+      ...sectionProps,
       children: [
 
-  new Paragraph({
-    children: [
-      new ImageRun({
-        data: await fetch(headerImg).then(r => r.arrayBuffer()),
-        transformation: {
-          width: 500,
-          height: 100
-        },
-        type: "png"
-      })
-    ]
-  }),
-
-new Paragraph({
-  text: reportTitle,
-  heading: HeadingLevel.HEADING_1,
-  alignment: AlignmentType.CENTER
-}),
-
-new Paragraph({
-  text: `Generated: ${generatedDate}`,
-  alignment: AlignmentType.CENTER
-}),
-
-...(batchDetails ? [
-
-new Paragraph(" "), // space after generated date
-
-new Table({
-  width: { size: 100, type: "pct" },
-
-  borders: {
-    top: { style: "none", size: 0, color: "FFFFFF" },
-    bottom: { style: "none", size: 0, color: "FFFFFF" },
-    left: { style: "none", size: 0, color: "FFFFFF" },
-    right: { style: "none", size: 0, color: "FFFFFF" },
-    insideHorizontal: { style: "none", size: 0, color: "FFFFFF" },
-    insideVertical: { style: "none", size: 0, color: "FFFFFF" }
-  },
-
-  rows: [
-
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph(`Batch: ${batchDetails.batch}`)]
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: await fetch(headerImg).then(r => r.arrayBuffer()),
+              transformation: { width: 500, height: 100 },
+              type: "png"
+            })
+          ]
         }),
-        new TableCell({
-          children: [new Paragraph(`Start Date: ${batchDetails.start_date}`)]
+
+        new Paragraph({
+          text: isAllTrainees
+            ? "TSDC Trainee List"
+            : hasBatchSection
+              ? `${courseSlugMap[slug] || slug.replace(/-/g, " ").toUpperCase()} Trainee List`
+              : reportTitle,
+          heading: HeadingLevel.HEADING_1,
+          alignment: AlignmentType.CENTER
         }),
-        new TableCell({
-          children: [new Paragraph(`End Date: ${batchDetails.end_date}`)]
-        })
+
+        new Paragraph({
+          text: `Generated: ${generatedDate}`,
+          alignment: AlignmentType.CENTER
+        }),
+
+        ...(hasBatchSection ? [
+          new Paragraph(" "),
+          new Table({
+            width: { size: 100, type: "pct" },
+            borders: {
+              top: { style: "none", size: 0, color: "FFFFFF" },
+              bottom: { style: "none", size: 0, color: "FFFFFF" },
+              left: { style: "none", size: 0, color: "FFFFFF" },
+              right: { style: "none", size: 0, color: "FFFFFF" },
+              insideHorizontal: { style: "none", size: 0, color: "FFFFFF" },
+              insideVertical: { style: "none", size: 0, color: "FFFFFF" }
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph(`Batch: ${batch}`)] }),
+                  new TableCell({ children: [new Paragraph(`Start Date: ${batchDetails?.start_date || ""}`)] }),
+                  new TableCell({ children: [new Paragraph(`End Date: ${batchDetails?.end_date || ""}`)] }),
+                ]
+              }),
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph(`Duration: ${batchDetails?.duration_hours ? batchDetails.duration_hours + " hrs" : ""}`)] }),
+                  new TableCell({ children: [new Paragraph(`Trainor: ${batchDetails?.trainor || ""}`)] }),
+                  new TableCell({ children: [new Paragraph(`Venue: ${batchDetails?.venue || ""}`)] }),
+                ]
+              }),
+            ]
+          }),
+          new Paragraph(" "),
+        ] : []),
+
+        new Paragraph(" "),
+
+        new Table({
+          rows,
+          width: { size: 100, type: "pct" },
+          ...(hasBatchSection ? {
+            columnWidths: [
+              1350, // Lastname
+              1350, // Firstname
+              1100, // Middlename
+              700,  // Gender
+              700,  // Civil Status (smaller)
+              1350, // Barangay (bigger)
+              1200, // City (bigger)
+              1200, // Province (bigger)
+              1000, // Contact
+              1000, // Date of Birth
+              450,  // Edu.
+              1000, // Classification
+              1000, // Scholarship
+              530,  // Year
+              780,  // Status
+            ]
+          } : {})
+        }),
+
+        ...(isYearReport ? [
+          new Paragraph({ text: `Overall Trainings: ${overallTrainings}` }),
+          new Paragraph({ text: `Overall Batches: ${overallBatches}` }),
+          new Paragraph({ text: `Overall Trainees: ${overallTrainees.toLocaleString()}` }),
+        ] : []),
+
       ]
-    }),
-
-    new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph(`Duration: ${batchDetails.duration_hours} hrs`)]
-        }),
-        new TableCell({
-          children: [new Paragraph(`Trainor: ${batchDetails.trainor}`)]
-        }),
-        new TableCell({
-          children: [new Paragraph(`Venue: ${batchDetails.venue}`)]
-        })
-      ]
-    })
-
-  ]
-}),
-
-new Paragraph(" "),
-
-] : []),
-
-new Paragraph(" "),
-
-  new Table({
-    rows,
-    width:{ size:100, type:"pct" }
-  }),
-
-]
     }]
   });
 
   const blob = await Packer.toBlob(doc);
-
   saveAs(
-  blob,
-  selectedYear
-    ? `tsdc_${selectedYear}_summary.docx`
-    : "tsdc_trainee_list.docx"
-);
+    blob,
+    isYearReport ? `tsdc_${selectedYear}_summary.docx` : "tsdc_trainee_list.docx"
+  );
 
   setShowDownload(false);
 };
